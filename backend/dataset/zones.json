@@ -1,0 +1,821 @@
+{
+  "meta": {
+    "city": "Artist Village, Khar West, Mumbai",
+    "coordinate_order": "lat,lon",
+    "generated_by": "LLM",
+    "date_created": "2024-04-27"
+  },
+  "zones": [
+    {
+      "zone_id": "Gorai_Depot",
+      "name": "Gorai Depot",
+      "coords": [
+        [19.234658, 72.826889],
+        [19.234558, 72.831539],
+        [19.230208, 72.831289],
+        [19.230458, 72.826989],
+        [19.232958, 72.829089]
+      ],
+      "type": "transport",
+      "pop_density": 45000,
+      "crowd_base": 1.35,
+      "lighting": 0.85,
+      "cctv_density": 0.75,
+      "police_score": 0.70,
+      "patrol_freq": 5,
+      "risk_base": 0.62,
+      "base_crime_rates": {
+        "Violent Crimes": 0.15,
+        "Property Crimes": 1.8,
+        "White-Collar Crimes": 0.05,
+        "Organized Crimes": 0.08,
+        "Hate Crimes": 0.02,
+        "__Consensual/Victimless Crimes__": 0.25
+      }
+    },
+    {
+      "zone_id": "lt_road_commercial",
+      "name": "L.T. Road",
+      "coords": [
+        [19.228711, 72.851711],
+        [19.230611, 72.853911],
+        [19.228111, 72.854011],
+        [19.226611, 72.851211],
+        [19.227311, 72.849611]
+      ],
+      "type": "commercial",
+      "pop_density": 38000,
+      "crowd_base": 1.25,
+      "lighting": 0.90,
+      "cctv_density": 0.68,
+      "police_score": 0.65,
+      "patrol_freq": 4,
+      "risk_base": 0.55,
+      "base_crime_rates": {
+        "Violent Crimes": 0.08,
+        "Property Crimes": 1.5,
+        "White-Collar Crimes": 0.12,
+        "Organized Crimes": 0.06,
+        "Hate Crimes": 0.01,
+        "__Consensual/Victimless Crimes__": 0.20
+      }
+    },
+    {
+      "zone_id": "shimpoli_mixed",
+      "name": "Shimpoli",
+      "coords": [
+        [19.223805, 72.851345],
+        [19.225955, 72.849145],
+        [19.226105, 72.853645],
+        [19.223455, 72.854045],
+        [19.221555, 72.851645]
+      ],
+      "type": "mixed",
+      "pop_density": 28000,
+      "crowd_base": 1.10,
+      "lighting": 0.88,
+      "cctv_density": 0.72,
+      "police_score": 0.75,
+      "patrol_freq": 5,
+      "risk_base": 0.38,
+      "base_crime_rates": {
+        "Violent Crimes": 0.05,
+        "Property Crimes": 0.8,
+        "White-Collar Crimes": 0.03,
+        "Organized Crimes": 0.02,
+        "Hate Crimes": 0.01,
+        "__Consensual/Victimless Crimes__": 0.15
+      }
+    },
+    {
+      "zone_id": "I.C._colony_residential",
+      "name": "I.C. colony ",
+      "coords": [
+        [19.247440, 72.848912],
+        [19.249590, 72.846712],
+        [19.249340, 72.851312],
+        [19.247040, 72.851612],
+        [19.245440, 72.849112]
+      ],
+      "type": "residential",
+      "pop_density": 32000,
+      "crowd_base": 0.85,
+      "lighting": 0.82,
+      "cctv_density": 0.80,
+      "police_score": 0.78,
+      "patrol_freq": 4,
+      "risk_base": 0.30,
+      "base_crime_rates": {
+        "Violent Crimes": 0.03,
+        "Property Crimes": 0.6,
+        "White-Collar Crimes": 0.08,
+        "Organized Crimes": 0.01,
+        "Hate Crimes": 0.005,
+        "__Consensual/Victimless Crimes__": 0.10
+      }
+    },
+    {
+      "zone_id": "Kajupada_slum",
+      "name": "Kajupada",
+      "coords": [
+        [19.235704, 72.869186],
+        [19.237604, 72.871586],
+        [19.235104, 72.871786],
+        [19.233504, 72.869286],
+        [19.234354, 72.867086]
+      ],
+      "type": "slum",
+      "pop_density": 65000,
+      "crowd_base": 1.30,
+      "lighting": 0.35,
+      "cctv_density": 0.15,
+      "police_score": 0.40,
+      "patrol_freq": 2,
+      "risk_base": 0.78,
+      "base_crime_rates": {
+        "Violent Crimes": 0.45,
+        "Property Crimes": 2.5,
+        "White-Collar Crimes": 0.02,
+        "Organized Crimes": 0.35,
+        "Hate Crimes": 0.08,
+        "__Consensual/Victimless Crimes__": 0.85
+      }
+    },
+    {
+      "zone_id": "mhb_colony",
+      "name": "MHB Colony",
+      "coords": [
+        [19.232205, 72.839307],
+        [19.234355, 72.837107],
+        [19.234105, 72.841707],
+        [19.231705, 72.842007],
+        [19.230105, 72.839507]
+      ],
+      "type": "residential",
+      "pop_density": 30000,
+      "crowd_base": 0.80,
+      "lighting": 0.78,
+      "cctv_density": 0.75,
+      "police_score": 0.72,
+      "patrol_freq": 4,
+      "risk_base": 0.32,
+      "base_crime_rates": {
+        "Violent Crimes": 0.04,
+        "Property Crimes": 0.7,
+        "White-Collar Crimes": 0.06,
+        "Organized Crimes": 0.02,
+        "Hate Crimes": 0.01,
+        "__Consensual/Victimless Crimes__": 0.12
+      }
+    },
+    {
+      "zone_id": "Eksar_mixed",
+      "name": "Eksar",
+      "coords": [
+        [19.239665, 72.842733],
+        [19.241815, 72.840533],
+        [19.241565, 72.845133],
+        [19.239065, 72.845333],
+        [19.237465, 72.842833]
+      ],
+      "type": "mixed",
+      "pop_density": 26000,
+      "crowd_base": 0.95,
+      "lighting": 0.85,
+      "cctv_density": 0.70,
+      "police_score": 0.73,
+      "patrol_freq": 5,
+      "risk_base": 0.35,
+      "base_crime_rates": {
+        "Violent Crimes": 0.04,
+        "Property Crimes": 0.65,
+        "White-Collar Crimes": 0.05,
+        "Organized Crimes": 0.03,
+        "Hate Crimes": 0.01,
+        "__Consensual/Victimless Crimes__": 0.18
+      }
+    },
+    {
+      "zone_id": "Sai_baba_nagar_road",
+      "name": "Sai Baba Nagar Road",
+      "coords": [
+        [19.219312, 72.847972],
+        [19.221462, 72.845772],
+        [19.221212, 72.850372],
+        [19.218712, 72.850572],
+        [19.217112, 72.848072]
+      ],
+      "type": "commercial",
+      "pop_density": 42000,
+      "crowd_base": 1.20,
+      "lighting": 0.87,
+      "cctv_density": 0.65,
+      "police_score": 0.68,
+      "patrol_freq": 4,
+      "risk_base": 0.52,
+      "base_crime_rates": {
+        "Violent Crimes": 0.10,
+        "Property Crimes": 1.4,
+        "White-Collar Crimes": 0.15,
+        "Organized Crimes": 0.08,
+        "Hate Crimes": 0.02,
+        "__Consensual/Victimless Crimes__": 0.22
+      }
+    },
+    {
+      "zone_id": "chandavarkar_road",
+      "name": "Chandavarkar Road",
+      "coords": [
+        [19.231026, 72.851740],
+        [19.233176, 72.849540],
+        [19.232926, 72.854140],
+        [19.230426, 72.854340],
+        [19.228826, 72.851840]
+      ],
+      "type": "commercial",
+      "pop_density": 36000,
+      "crowd_base": 1.18,
+      "lighting": 0.89,
+      "cctv_density": 0.70,
+      "police_score": 0.72,
+      "patrol_freq": 4,
+      "risk_base": 0.48,
+      "base_crime_rates": {
+        "Violent Crimes": 0.07,
+        "Property Crimes": 1.3,
+        "White-Collar Crimes": 0.10,
+        "Organized Crimes": 0.05,
+        "Hate Crimes": 0.01,
+        "__Consensual/Victimless Crimes__": 0.18
+      }
+    },
+    {
+      "zone_id": "yogi_nagar",
+      "name": "Yogi Nagar",
+      "coords": [
+        [19.235435, 72.844240],
+        [19.237585, 72.842040],
+        [19.237335, 72.846640],
+        [19.234835, 72.846840],
+        [19.233235, 72.844340]
+      ],
+      "type": "mixed",
+      "pop_density": 29000,
+      "crowd_base": 0.90,
+      "lighting": 0.80,
+      "cctv_density": 0.68,
+      "police_score": 0.70,
+      "patrol_freq": 4,
+      "risk_base": 0.40,
+      "base_crime_rates": {
+        "Violent Crimes": 0.05,
+        "Property Crimes": 0.75,
+        "White-Collar Crimes": 0.04,
+        "Organized Crimes": 0.03,
+        "Hate Crimes": 0.01,
+        "__Consensual/Victimless Crimes__": 0.15
+      }
+    },
+    {
+      "zone_id": "sky_city_oberoi",
+      "name": "Sky City Oberoi",
+      "coords": [
+        [19.221453, 72.863600],
+        [19.223603, 72.861400],
+        [19.223353, 72.866000],
+        [19.220853, 72.866200],
+        [19.219253, 72.863700]
+
+      ],
+      "type": "residential",
+      "pop_density": 31000,
+      "crowd_base": 0.82,
+      "lighting": 0.81,
+      "cctv_density": 0.78,
+      "police_score": 0.76,
+      "patrol_freq": 4,
+      "risk_base": 0.31,
+      "base_crime_rates": {
+        "Violent Crimes": 0.03,
+        "Property Crimes": 0.62,
+        "White-Collar Crimes": 0.07,
+        "Organized Crimes": 0.02,
+        "Hate Crimes": 0.005,
+        "__Consensual/Victimless Crimes__": 0.11
+      }
+    },
+    {
+      "zone_id": "jambli_gully",
+      "name": "Jambli Gully",
+      "coords": [
+        [19.226416, 72.852095],
+        [19.228566, 72.849895],
+        [19.228316, 72.854495],
+        [19.225826, 72.854695],
+        [19.224226, 72.852195]
+      ],
+      "type": "mixed",
+      "pop_density": 33000,
+      "crowd_base": 1.00,
+      "lighting": 0.83,
+      "cctv_density": 0.72,
+      "police_score": 0.71,
+      "patrol_freq": 4,
+      "risk_base": 0.42,
+      "base_crime_rates": {
+        "Violent Crimes": 0.06,
+        "Property Crimes": 0.90,
+        "White-Collar Crimes": 0.05,
+        "Organized Crimes": 0.04,
+        "Hate Crimes": 0.01,
+        "__Consensual/Victimless Crimes__": 0.16
+      }
+    },
+    {
+      "zone_id": "magathane_commercial",
+      "name": "Magathane",
+      "coords": [
+        [19.218366, 72.863422],
+        [19.220516, 72.861222],
+        [19.220266, 72.865822],
+        [19.217766, 72.866022],
+        [19.216166, 72.863522]
+      ],
+      "type": "commercial",
+      "pop_density": 40000,
+      "crowd_base": 1.22,
+      "lighting": 0.75,
+      "cctv_density": 0.60,
+      "police_score": 0.62,
+      "patrol_freq": 3,
+      "risk_base": 0.58,
+      "base_crime_rates": {
+        "Violent Crimes": 0.12,
+        "Property Crimes": 1.6,
+        "White-Collar Crimes": 0.08,
+        "Organized Crimes": 0.10,
+        "Hate Crimes": 0.03,
+        "__Consensual/Victimless Crimes__": 0.28
+      }
+    },
+    {
+      "zone_id": "Babhai_Naka",
+      "name": "Babhai Naka",
+      "coords": [
+        [19.225847, 72.844784],
+        [19.227997, 72.842584],
+        [19.227747, 72.847184],
+        [19.225247, 72.847384],
+        [19.223647, 72.844884]
+      ],
+      "type": "mixed",
+      "pop_density": 25000,
+      "crowd_base": 1.15,
+      "lighting": 0.90,
+      "cctv_density": 0.75,
+      "police_score": 0.77,
+      "patrol_freq": 5,
+      "risk_base": 0.36,
+      "base_crime_rates": {
+        "Violent Crimes": 0.04,
+        "Property Crimes": 0.70,
+        "White-Collar Crimes": 0.03,
+        "Organized Crimes": 0.02,
+        "Hate Crimes": 0.01,
+        "__Consensual/Victimless Crimes__": 0.14
+      }
+    },
+    {
+      "zone_id": "chikuwadi_commercial",
+      "name": "Chikuwadi",
+      "coords": [
+        [19.228630, 72.838650],
+        [19.230780, 72.836450],
+        [19.230530, 72.841100],
+        [19.228130, 72.841300],
+        [19.226480, 72.838750]
+      ],
+      "type": "commercial",
+      "pop_density": 44000,
+      "crowd_base": 1.28,
+      "lighting": 0.82,
+      "cctv_density": 0.62,
+      "police_score": 0.64,
+      "patrol_freq": 4,
+      "risk_base": 0.56,
+      "base_crime_rates": {
+        "Violent Crimes": 0.11,
+        "Property Crimes": 1.7,
+        "White-Collar Crimes": 0.13,
+        "Organized Crimes": 0.09,
+        "Hate Crimes": 0.02,
+        "__Consensual/Victimless Crimes__": 0.24
+      }
+    },
+    {
+      "zone_id": "govind_nagar",
+      "name": "Govind nagar",
+      "coords": [
+        [19.235047, 72.851319],
+        [19.237197, 72.849119],
+        [19.236947, 72.853719],
+        [19.234447, 72.853919],
+        [19.232847, 72.851419]
+      ],
+      "type": "mixed",
+      "pop_density": 35000,
+      "crowd_base": 1.05,
+      "lighting": 0.76,
+      "cctv_density": 0.65,
+      "police_score": 0.66,
+      "patrol_freq": 3,
+      "risk_base": 0.47,
+      "base_crime_rates": {
+        "Violent Crimes": 0.08,
+        "Property Crimes": 1.1,
+        "White-Collar Crimes": 0.06,
+        "Organized Crimes": 0.05,
+        "Hate Crimes": 0.02,
+        "__Consensual/Victimless Crimes__": 0.19
+      }
+    },
+    {
+      "zone_id": "Prem_nagar",
+      "name": "Prem Nagar",
+      "coords": [
+        [19.236663, 72.853350],
+        [19.238813, 72.851150],
+        [19.238563, 72.855750],
+        [19.236063, 72.855950],
+        [19.234463, 72.853450]
+      ],
+      "type": "residential",
+      "pop_density": 29000,
+      "crowd_base": 0.78,
+      "lighting": 0.80,
+      "cctv_density": 0.76,
+      "police_score": 0.74,
+      "patrol_freq": 4,
+      "risk_base": 0.33,
+      "base_crime_rates": {
+        "Violent Crimes": 0.04,
+        "Property Crimes": 0.68,
+        "White-Collar Crimes": 0.05,
+        "Organized Crimes": 0.02,
+        "Hate Crimes": 0.01,
+        "__Consensual/Victimless Crimes__": 0.12
+      }
+    },
+    {
+      "zone_id": "LIC_COLONY",
+      "name": "LIC COLONY",
+      "coords": [
+        [19.243532, 72.849541],
+        [19.245682, 72.847341],
+        [19.245432, 72.851941],
+        [19.242932, 72.852141],
+        [19.241332, 72.849641]
+      ],
+      "type": "residential",
+      "pop_density": 30500,
+      "crowd_base": 0.84,
+      "lighting": 0.82,
+      "cctv_density": 0.77,
+      "police_score": 0.75,
+      "patrol_freq": 4,
+      "risk_base": 0.32,
+      "base_crime_rates": {
+        "Violent Crimes": 0.03,
+        "Property Crimes": 0.65,
+        "White-Collar Crimes": 0.07,
+        "Organized Crimes": 0.02,
+        "Hate Crimes": 0.005,
+        "__Consensual/Victimless Crimes__": 0.11
+      }
+    },
+    {
+      "zone_id": "Kora_Kendra",
+      "name": "Kora Kendra",
+      "coords": [
+        [19.220080, 72.845036],
+        [19.222230, 72.842836],
+        [19.221980, 72.847436],
+        [19.219480, 72.847636],
+        [19.217880, 72.845136]
+      ],
+      "type": "commercial",
+      "pop_density": 41000,
+      "crowd_base": 1.24,
+      "lighting": 0.79,
+      "cctv_density": 0.63,
+      "police_score": 0.63,
+      "patrol_freq": 3,
+      "risk_base": 0.54,
+      "base_crime_rates": {
+        "Violent Crimes": 0.10,
+        "Property Crimes": 1.5,
+        "White-Collar Crimes": 0.11,
+        "Organized Crimes": 0.07,
+        "Hate Crimes": 0.02,
+        "__Consensual/Victimless Crimes__": 0.23
+      }
+    },
+    {
+      "zone_id": "mahavir_nagar",
+      "name": "Mahavir Nagar",
+      "coords": [
+        [19.210901, 72.839328],
+        [19.213051, 72.837128],
+        [19.212801, 72.841728],
+        [19.210301, 72.841928],
+        [19.208701, 72.839428]
+      ],
+      "type": "residential",
+      "pop_density": 34000,
+      "crowd_base": 0.88,
+      "lighting": 0.74,
+      "cctv_density": 0.70,
+      "police_score": 0.68,
+      "patrol_freq": 3,
+      "risk_base": 0.45,
+      "base_crime_rates": {
+        "Violent Crimes": 0.07,
+        "Property Crimes": 0.95,
+        "White-Collar Crimes": 0.04,
+        "Organized Crimes": 0.04,
+        "Hate Crimes": 0.015,
+        "__Consensual/Victimless Crimes__": 0.17
+      }
+    },
+    {
+      "zone_id": "satya_nagar",
+      "name": "Satya Nagar",
+      "coords": [
+        [19.215794, 72.840916],
+        [19.217944, 72.838716],
+        [19.217694, 72.843316],
+        [19.215194, 72.843516],
+        [19.213594, 72.841016]
+      ],
+      "type": "residential",
+      "pop_density": 31500,
+      "crowd_base": 0.81,
+      "lighting": 0.79,
+      "cctv_density": 0.74,
+      "police_score": 0.71,
+      "patrol_freq": 4,
+      "risk_base": 0.34,
+      "base_crime_rates": {
+        "Violent Crimes": 0.04,
+        "Property Crimes": 0.72,
+        "White-Collar Crimes": 0.06,
+        "Organized Crimes": 0.02,
+        "Hate Crimes": 0.01,
+        "__Consensual/Victimless Crimes__": 0.13
+      }
+    },
+    {
+      "zone_id": "daulat_nagar",
+      "name": "Daulat Nagar",
+      "coords": [
+        [19.235435, 72.860132],
+        [19.237585, 72.857932],
+        [19.237335, 72.862532],
+        [19.234835, 72.862732],
+        [19.233235, 72.860232]
+      ],
+      "type": "residential",
+      "pop_density": 30000,
+      "crowd_base": 0.79,
+      "lighting": 0.78,
+      "cctv_density": 0.73,
+      "police_score": 0.70,
+      "patrol_freq": 4,
+      "risk_base": 0.35,
+      "base_crime_rates": {
+        "Violent Crimes": 0.04,
+        "Property Crimes": 0.70,
+        "White-Collar Crimes": 0.05,
+        "Organized Crimes": 0.03,
+        "Hate Crimes": 0.01,
+        "__Consensual/Victimless Crimes__": 0.12
+      }
+    },
+    {
+      "zone_id": "devipada",
+      "name": "Devipada",
+      "coords": [
+        [19.225235, 72.865859],
+        [19.227385, 72.863659],
+        [19.227135, 72.868259],
+        [19.224635, 72.868459],
+        [19.223035, 72.865959]
+      ],
+      "type": "slum",
+      "pop_density": 62000,
+      "crowd_base": 1.28,
+      "lighting": 0.38,
+      "cctv_density": 0.18,
+      "police_score": 0.42,
+      "patrol_freq": 2,
+      "risk_base": 0.75,
+      "base_crime_rates": {
+        "Violent Crimes": 0.42,
+        "Property Crimes": 2.3,
+        "White-Collar Crimes": 0.03,
+        "Organized Crimes": 0.32,
+        "Hate Crimes": 0.07,
+        "__Consensual/Victimless Crimes__": 0.80
+      }
+    },
+    {
+      "zone_id": "sodawala_lane",
+      "name": "Sodawala Lane",
+      "coords": [
+        [19.234968, 72.853692],
+        [19.237118, 72.851492],
+        [19.236868, 72.856092],
+        [19.234368, 72.856292],
+        [19.232768, 72.853792]
+      ],
+      "type": "commercial",
+      "pop_density": 39000,
+      "crowd_base": 1.19,
+      "lighting": 0.81,
+      "cctv_density": 0.64,
+      "police_score": 0.65,
+      "patrol_freq": 3,
+      "risk_base": 0.53,
+      "base_crime_rates": {
+        "Violent Crimes": 0.09,
+        "Property Crimes": 1.45,
+        "White-Collar Crimes": 0.10,
+        "Organized Crimes": 0.07,
+        "Hate Crimes": 0.02,
+        "__Consensual/Victimless Crimes__": 0.21
+      }
+    },
+    {
+      "zone_id": "thakur_complex_area",
+      "name": "Thakur Complex Area",
+      "coords": [
+        [19.209217, 72.864313],
+        [19.211367, 72.862113],
+        [19.211117, 72.866713],
+        [19.208617, 72.866913],
+        [19.207017, 72.864413]
+      ],
+      "type": "mixed",
+      "pop_density": 33500,
+      "crowd_base": 1.08,
+      "lighting": 0.84,
+      "cctv_density": 0.73,
+      "police_score": 0.74,
+      "patrol_freq": 4,
+      "risk_base": 0.41,
+      "base_crime_rates": {
+        "Violent Crimes": 0.06,
+        "Property Crimes": 0.88,
+        "White-Collar Crimes": 0.09,
+        "Organized Crimes": 0.04,
+        "Hate Crimes": 0.01,
+        "__Consensual/Victimless Crimes__": 0.16
+      }
+    },
+    {
+      "zone_id": "Poisar_mixed",
+      "name": "Poisar",
+      "coords": [
+        [19.211634, 72.851689],
+        [19.213784, 72.849489],
+        [19.213534, 72.854089],
+        [19.211034, 72.854289],
+        [19.209434, 72.851789]
+      ],
+      "type": "mixed",
+      "pop_density": 27000,
+      "crowd_base": 1.05,
+      "lighting": 0.86,
+      "cctv_density": 0.71,
+      "police_score": 0.72,
+      "patrol_freq": 4,
+      "risk_base": 0.39,
+      "base_crime_rates": {
+        "Violent Crimes": 0.05,
+        "Property Crimes": 0.78,
+        "White-Collar Crimes": 0.04,
+        "Organized Crimes": 0.03,
+        "Hate Crimes": 0.01,
+        "__Consensual/Victimless Crimes__": 0.15
+      }
+    },
+    {
+      "zone_id": "Charkop_market",
+      "name": "Charkop market",
+      "coords": [
+        [19.215289, 72.828535],
+        [19.217439, 72.826335],
+        [19.217189, 72.830935],
+        [19.214689, 72.831135],
+        [19.213089, 72.828635]
+      ],
+      "type": "residential",
+      "pop_density": 32000,
+      "crowd_base": 0.83,
+      "lighting": 0.77,
+      "cctv_density": 0.72,
+      "police_score": 0.69,
+      "patrol_freq": 3,
+      "risk_base": 0.37,
+      "base_crime_rates": {
+        "Violent Crimes": 0.05,
+        "Property Crimes": 0.80,
+        "White-Collar Crimes": 0.05,
+        "Organized Crimes": 0.03,
+        "Hate Crimes": 0.01,
+        "__Consensual/Victimless Crimes__": 0.14
+      }
+    },
+    {
+      "zone_id": "mandapeshwar_road",
+      "name": "Mandapeshwar Road",
+      "coords": [
+        [19.247034, 72.854173],
+        [19.249184, 72.851973],
+        [19.248934, 72.856573],
+        [19.246434, 72.856773],
+        [19.244834, 72.854273]
+      ],
+      "type": "commercial",
+      "pop_density": 37000,
+      "crowd_base": 1.21,
+      "lighting": 0.86,
+      "cctv_density": 0.69,
+      "police_score": 0.70,
+      "patrol_freq": 4,
+      "risk_base": 0.50,
+      "base_crime_rates": {
+        "Violent Crimes": 0.08,
+        "Property Crimes": 1.35,
+        "White-Collar Crimes": 0.11,
+        "Organized Crimes": 0.06,
+        "Hate Crimes": 0.015,
+        "__Consensual/Victimless Crimes__": 0.19
+      }
+    },
+    {
+      "zone_id": "Charkop_Sector_5",
+      "name": "Charkop Sector 5",
+      "coords": [
+        [19.215976, 72.824480],
+        [19.218126, 72.822280],
+        [19.217876, 72.826880],
+        [19.215376, 72.827080],
+        [19.213776, 72.824580]
+      ],
+      "type": "residential",
+      "pop_density": 31000,
+      "crowd_base": 0.80,
+      "lighting": 0.79,
+      "cctv_density": 0.75,
+      "police_score": 0.72,
+      "patrol_freq": 4,
+      "risk_base": 0.33,
+      "base_crime_rates": {
+        "Violent Crimes": 0.04,
+        "Property Crimes": 0.69,
+        "White-Collar Crimes": 0.06,
+        "Organized Crimes": 0.02,
+        "Hate Crimes": 0.01,
+        "__Consensual/Victimless Crimes__": 0.12
+      }
+    },
+    {
+      "zone_id": "dahanukarwadi",
+      "name": "Dahanukarwadi",
+      "coords": [
+        [19.205062, 72.834444],
+        [19.207212, 72.832244],
+        [19.206962, 72.836844],
+        [19.204462, 72.837044],
+        [19.202862, 72.834544]
+      ],
+      "type": "mixed",
+      "pop_density": 36000,
+      "crowd_base": 1.12,
+      "lighting": 0.73,
+      "cctv_density": 0.61,
+      "police_score": 0.63,
+      "patrol_freq": 3,
+      "risk_base": 0.51,
+      "base_crime_rates": {
+        "Violent Crimes": 0.10,
+        "Property Crimes": 1.25,
+        "White-Collar Crimes": 0.07,
+        "Organized Crimes": 0.08,
+        "Hate Crimes": 0.03,
+        "__Consensual/Victimless Crimes__": 0.22
+      }
+    }
+  ]
+}
