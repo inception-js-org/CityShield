@@ -22,3 +22,11 @@ htmlcov/
 .cache/
 .pytest_cache/
 models/
+node_modules/
+.env
+__pycache__/
+*.pyc
+.env
+node_modules/
+.next/
+dist/
