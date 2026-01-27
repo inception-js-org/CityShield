@@ -1,12 +1,9 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
 from prisma_client import prisma
-from clerk_client import clerk
+from clerk_client import create_clerk_invitation
 
 router = APIRouter(prefix="/api/officers", tags=["Officers"])
-
-
-# ================= SCHEMAS =================
 
 class OfficerInvite(BaseModel):
     name: str | None = None
@@ -15,37 +12,17 @@ class OfficerInvite(BaseModel):
     badge: str | None = None
     phone: str | None = None
 
-
-# ================= ROUTES =================
-
-@router.get("/")
+@router.get("")
 async def list_officers():
     return await prisma.policeofficer.find_many()
 
-
 @router.post("/invite")
 async def invite_officer(payload: OfficerInvite):
-    # 1️⃣ Check if officer already exists
-    existing = await prisma.policeofficer.find_unique(
-        where={"email": payload.email}
-    )
-
-    if existing:
-        raise HTTPException(
-            status_code=409,
-            detail="Officer with this email already exists",
-        )
-
     try:
-        # 2️⃣ Send Clerk invitation email
-        clerk.invitations.create_invitation(
-            email_address=payload.email,
-            public_metadata={
-                "role": "OFFICER",
-            },
-        )
+        # 1️⃣ Send Clerk invitation email
+        invite = create_clerk_invitation(payload.email)
 
-        # 3️⃣ Store officer in DB
+        # 2️⃣ Store officer locally
         officer = await prisma.policeofficer.create(
             data={
                 "name": payload.name,
@@ -59,12 +36,10 @@ async def invite_officer(payload: OfficerInvite):
         )
 
         return {
-            "message": "Invitation email sent successfully",
+            "message": "Invitation email sent",
+            "clerk_invite_id": invite["id"],
             "officer": officer,
         }
 
     except Exception as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invitation failed: {str(e)}",
-        )
+        raise HTTPException(status_code=400, detail=str(e))
