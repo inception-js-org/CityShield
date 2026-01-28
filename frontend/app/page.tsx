@@ -8,6 +8,7 @@ import { CommandList } from "@/components/ui/command"
 import { CommandInput } from "@/components/ui/command"
 import { CommandDialog } from "@/components/ui/command"
 import { useRouter } from "next/navigation"
+import Script from "next/script"
 
 import React, { useEffect, useRef, useState } from "react"
 import Link from "next/link"
@@ -352,6 +353,12 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* Load Google Maps API with presentation key only for landing page */}
+      <Script
+        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY_ALT}&libraries=marker,visualization`}
+        strategy="beforeInteractive"
+      />
     </div>
   )
 }

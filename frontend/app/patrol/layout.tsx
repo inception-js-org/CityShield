@@ -112,12 +112,12 @@ export default function PatrolLayout({ children }: { children: React.ReactNode }
       )}
 
       {/* Dock Navigation with collapse button */}
-      <div className={`fixed bottom-0 left-0 right-0 z-50 flex justify-center transition-all duration-300 ${isDockVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full pointer-events-none"}`}>
-        {/* Collapse button - positioned above dock */}
-        {isDockVisible && shouldHideDockByDefault && (
+      <div className={`fixed top-1/2 left-0 -translate-y-1/2 z-50 flex justify-center transition-all duration-300 ${isDockVisible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-full pointer-events-none"}`}>
+        {/* Collapse button - positioned at right side of dock */}
+        {isDockVisible && (
           <button
             onClick={() => setIsDockVisible(false)}
-            className="absolute bottom-[72px] flex items-center justify-center h-8 w-8 bg-card/90 backdrop-blur-xl border border-border rounded-full shadow-lg hover:bg-card transition-all duration-200 group"
+            className="absolute -right-14 flex items-center justify-center h-10 w-10 bg-card/90 backdrop-blur-xl border border-border rounded-full shadow-lg hover:bg-card transition-all duration-200 group"
             aria-label="Hide navigation dock"
           >
             <ChevronLeft className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
@@ -125,10 +125,10 @@ export default function PatrolLayout({ children }: { children: React.ReactNode }
         )}
         <Dock 
           items={dockItems}
-          baseItemSize={48}
-          magnification={68}
-          distance={140}
-          panelHeight={72}
+          baseItemSize={44}
+          magnification={64}
+          distance={120}
+          panelHeight={68}
         />
       </div>
     </div>
