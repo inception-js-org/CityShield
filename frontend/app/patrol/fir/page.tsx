@@ -1,17 +1,14 @@
 "use client"
 
-import React from "react"
-
-import { useState } from "react"
-import { 
-  FileText, 
-  MapPin, 
-  Camera, 
+import React, { useEffect, useState } from "react"
+import {
+  FileText,
+  Camera,
   Send,
   Save,
-  Navigation,
-  CheckCircle
+  CheckCircle,
 } from "lucide-react"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -33,28 +30,64 @@ const crimeTypes = [
   "Vehicle Theft",
   "Fraud",
   "Suspicious Activity",
-  "Other"
+  "Other",
 ]
+
+/* ---------------- Types ---------------- */
+
+interface Zone {
+  id: string | number
+  name: string
+  type: string
+  coords: string
+}
+
+/* ---------------- Component ---------------- */
 
 export default function FieldFIR() {
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [crimeType, setCrimeType] = useState("")
   const [location, setLocation] = useState("")
-  const [isGettingLocation, setIsGettingLocation] = useState(false)
+  const [zones, setZones] = useState<Zone[]>([])
+  const [loadingZones, setLoadingZones] = useState(true)
 
-  const handleGetLocation = () => {
-    setIsGettingLocation(true)
-    // Simulate GPS fetch
-    setTimeout(() => {
-      setLocation("28.6139° N, 77.2090° E - Sector 7, Industrial Area")
-      setIsGettingLocation(false)
-    }, 1000)
-  }
+  /* -------- Fetch zones -------- */
+  useEffect(() => {
+    const fetchZones = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/zones")
 
+        if (!res.ok) {
+          throw new Error(`HTTP error ${res.status}`)
+        }
+
+        const data = await res.json()
+        console.log("Zones API response:", data)
+        setZones(data)
+      } catch (err) {
+        console.error("Failed to load zones:", err)
+        setZones([])
+      } finally {
+        setLoadingZones(false)
+      }
+    }
+
+    fetchZones()
+  }, [])
+
+  /* -------- Submit -------- */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!crimeType || !location) {
+      alert("Please fill all required fields")
+      return
+    }
+
     setIsSubmitted(true)
   }
 
+  /* -------- Success Screen -------- */
   if (isSubmitted) {
     return (
       <div className="p-4 space-y-4">
@@ -63,10 +96,9 @@ export default function FieldFIR() {
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10 mb-4">
               <CheckCircle className="h-8 w-8 text-success" />
             </div>
-            <h2 className="text-xl font-semibold text-foreground">FIR Submitted Successfully</h2>
-            <p className="text-muted-foreground mt-2">Reference: FIR-2024-089</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              The report has been sent to the Command Center
+            <h2 className="text-xl font-semibold">FIR Submitted Successfully</h2>
+            <p className="text-muted-foreground mt-2">
+              Reference: FIR-2024-089
             </p>
             <Button onClick={() => setIsSubmitted(false)} className="mt-6">
               File Another Report
@@ -77,6 +109,7 @@ export default function FieldFIR() {
     )
   }
 
+  /* -------- Form -------- */
   return (
     <div className="p-4 space-y-4">
       {/* Header */}
@@ -87,30 +120,36 @@ export default function FieldFIR() {
               <FileText className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="font-semibold text-foreground">Field FIR</h1>
-              <p className="text-sm text-muted-foreground">On-ground incident reporting</p>
+              <h1 className="font-semibold">Field FIR</h1>
+              <p className="text-sm text-muted-foreground">
+                On-ground incident reporting
+              </p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* FIR Form */}
+      {/* Form */}
       <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg">New Incident Report</CardTitle>
+        <CardHeader>
+          <CardTitle>New Incident Report</CardTitle>
         </CardHeader>
+
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+
             {/* Crime Type */}
             <div className="space-y-2">
-              <Label htmlFor="crimeType">Incident Type *</Label>
-              <Select required>
-                <SelectTrigger id="crimeType">
+              <Label>Incident Type *</Label>
+              <Select value={crimeType} onValueChange={setCrimeType} required>
+                <SelectTrigger>
                   <SelectValue placeholder="Select incident type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {crimeTypes.map(type => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  {crimeTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -118,34 +157,46 @@ export default function FieldFIR() {
 
             {/* Location */}
             <div className="space-y-2">
-              <Label htmlFor="location">Location *</Label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    id="location"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="Enter location or use GPS"
-                    className="pr-10"
-                    required
+              <Label>Location *</Label>
+              <Select
+                value={location}
+                onValueChange={setLocation}
+                disabled={loadingZones}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      loadingZones
+                        ? "Loading zones..."
+                        : "Select location zone"
+                    }
                   />
-                  <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                </div>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={handleGetLocation}
-                  disabled={isGettingLocation}
-                  className="gap-2 bg-transparent"
-                >
-                  <Navigation className="h-4 w-4" />
-                  {isGettingLocation ? "Getting..." : "GPS"}
-                </Button>
-              </div>
+                </SelectTrigger>
+
+                <SelectContent>
+                  {zones.length === 0 && !loadingZones && (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                      No zones available
+                    </div>
+                  )}
+
+                  {zones.map((zone, idx) => {
+  const display = `${zone.name}, ${zone.type}, ${zone.coords}`
+  return (
+    <SelectItem key={idx} value={display}>
+      {display}
+    </SelectItem>
+  )
+})}
+
+                </SelectContent>
+              </Select>
+
               {location && (
                 <p className="text-xs text-success flex items-center gap-1">
                   <CheckCircle className="h-3 w-3" />
-                  Location captured
+                  Location selected
                 </p>
               )}
             </div>
@@ -153,31 +204,28 @@ export default function FieldFIR() {
             {/* Date & Time */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="date">Date *</Label>
-                <Input 
-                  id="date" 
-                  type="date" 
-                  defaultValue={new Date().toISOString().split('T')[0]}
-                  required 
+                <Label>Date *</Label>
+                <Input
+                  type="date"
+                  defaultValue={new Date().toISOString().split("T")[0]}
+                  required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="time">Time *</Label>
-                <Input 
-                  id="time" 
-                  type="time" 
+                <Label>Time *</Label>
+                <Input
+                  type="time"
                   defaultValue={new Date().toTimeString().slice(0, 5)}
-                  required 
+                  required
                 />
               </div>
             </div>
 
             {/* Description */}
             <div className="space-y-2">
-              <Label htmlFor="description">Description *</Label>
+              <Label>Description *</Label>
               <textarea
-                id="description"
-                className="w-full min-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="w-full min-h-[120px] rounded-md border border-input px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring"
                 placeholder="Detailed description of the incident..."
                 required
               />
@@ -185,24 +233,20 @@ export default function FieldFIR() {
 
             {/* Involved Parties */}
             <div className="space-y-2">
-              <Label htmlFor="parties">Involved Parties (optional)</Label>
-              <Input 
-                id="parties" 
-                placeholder="Names or descriptions of people involved"
-              />
+              <Label>Involved Parties (optional)</Label>
+              <Input placeholder="Names or descriptions" />
             </div>
 
-            {/* Media Upload */}
+            {/* Media */}
             <div className="space-y-2">
               <Label>Attach Evidence (optional)</Label>
-              <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                <Camera className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                <Camera className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground mb-2">
-                  Take a photo or upload from gallery
+                  Take a photo or upload
                 </p>
                 <div className="flex justify-center gap-2">
                   <Button type="button" variant="outline" size="sm">
-                    <Camera className="h-4 w-4 mr-2" />
                     Camera
                   </Button>
                   <Button type="button" variant="outline" size="sm">
@@ -214,15 +258,16 @@ export default function FieldFIR() {
 
             {/* Actions */}
             <div className="flex gap-3 pt-4">
-              <Button type="button" variant="outline" className="flex-1 gap-2 bg-transparent">
-                <Save className="h-4 w-4" />
+              <Button type="button" variant="outline" className="flex-1">
+                <Save className="h-4 w-4 mr-2" />
                 Save Draft
               </Button>
-              <Button type="submit" className="flex-1 gap-2">
-                <Send className="h-4 w-4" />
+              <Button type="submit" className="flex-1">
+                <Send className="h-4 w-4 mr-2" />
                 Submit FIR
               </Button>
             </div>
+
           </form>
         </CardContent>
       </Card>

@@ -111,6 +111,11 @@ app.include_router(officers_router)
 from routes.hotspots import router as hotspots_router
 app.include_router(hotspots_router)
 
+# ================= ZONES ROUTES (✅ ADD THIS) =================
+
+from routes.zones import router as zones_router
+app.include_router(zones_router)
+
 # ================= ENTRYPOINT =================
 
 if __name__ == "__main__":
