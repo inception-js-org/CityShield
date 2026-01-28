@@ -114,3 +114,12 @@ export const officersAPI = {
     fetchAPI(`/api/officers/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   delete: (id: string) => fetchAPI(`/api/officers/${id}`, { method: "DELETE" }),
 };
+
+// Hotspots & Crime Data
+export const hotspotsAPI = {
+  getData: () => fetchAPI("/api/hotspots/data"),
+  getAllCoordinates: () => fetchAPI("/api/hotspots/all-coordinates"),
+  getCrimes: () => fetchAPI("/api/hotspots/crimes"),
+  getCrimesSummary: () => fetchAPI("/api/hotspots/crimes/summary"),
+  getStats: () => fetchAPI("/api/hotspots/stats"),
+};
