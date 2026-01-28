@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useState, useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
 import { 
@@ -13,7 +13,9 @@ import {
   Bell, 
   Settings, 
   LogOut,
-  Car
+  Car,
+  ChevronRight,
+  ChevronLeft
 } from "lucide-react"
 import Dock, { type DockItemData } from "@/components/dock"
 
@@ -31,6 +33,22 @@ const navItems = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
+  const [isDockVisible, setIsDockVisible] = useState(false)
+  const [shouldHideDockByDefault, setShouldHideDockByDefault] = useState(false)
+
+  useEffect(() => {
+    // Check if screen is small, hide dock by default on mobile
+    const checkScreenSize = () => {
+      setShouldHideDockByDefault(window.innerWidth < 1024)
+      if (window.innerWidth < 1024) {
+        setIsDockVisible(false)
+      }
+    }
+    
+    checkScreenSize()
+    window.addEventListener("resize", checkScreenSize)
+    return () => window.removeEventListener("resize", checkScreenSize)
+  }, [])
 
   const isActive = (href: string) => {
     if (href === "/admin") return pathname === "/admin"
@@ -80,14 +98,35 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </header>
 
       {/* Main Content */}
-      <main className="pt-16 pb-28 ml-24">
+      <main className={`pt-16 pb-28 transition-all duration-300 ${isDockVisible ? "ml-24" : "ml-0"}`}>
         <div className="min-h-[calc(100vh-10rem)]">
           {children}
         </div>
       </main>
 
-      {/* Bottom Dock Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-50">
+      {/* Dock Toggle Button - shown when dock is hidden */}
+      {!isDockVisible && (
+        <button
+          onClick={() => setIsDockVisible(true)}
+          className="fixed left-0 top-1/2 -translate-y-1/2 z-50 flex items-center justify-center h-12 w-6 bg-card/90 backdrop-blur-xl border border-l-0 border-border rounded-r-lg shadow-lg hover:bg-card transition-all duration-200 group"
+          aria-label="Show navigation dock"
+        >
+          <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+        </button>
+      )}
+
+      {/* Dock Navigation with collapse button */}
+      <div className={`fixed top-1/2 left-0 -translate-y-1/2 z-50 flex justify-center transition-all duration-300 ${isDockVisible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-full pointer-events-none"}`}>
+        {/* Collapse button - positioned at right side of dock */}
+        {isDockVisible && (
+          <button
+            onClick={() => setIsDockVisible(false)}
+            className="absolute -right-20 flex items-center justify-center h-10 w-10 bg-card/90 backdrop-blur-xl border border-border rounded-full shadow-lg hover:bg-card transition-all duration-200 group"
+            aria-label="Hide navigation dock"
+          >
+            <ChevronLeft className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+          </button>
+        )}
         <Dock 
           items={dockItems}
           baseItemSize={44}

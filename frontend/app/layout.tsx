@@ -34,8 +34,19 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
   return (
     <html lang="en">
+      <head>
+        {apiKey && (
+          <script
+            src={`https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker,visualization`}
+            async
+            defer
+          />
+        )}
+      </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         {children}
         <Analytics />

@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useEffect, useRef } from "react"
 
 import { 
   AlertTriangle, 
@@ -43,6 +43,73 @@ const topRiskyZones = [
 ]
 
 export default function AdminDashboard() {
+  const mapRef = useRef<HTMLDivElement>(null)
+  const mapInstanceRef = useRef<google.maps.Map | null>(null)
+
+  // Initialize map with heatmap data
+  useEffect(() => {
+    const initializeMap = () => {
+      if (!mapRef.current || !window.google) return
+
+      const CITY_CENTER = { lat: 19.08, lng: 72.88 } // Mumbai coordinates
+      
+      const map = new google.maps.Map(mapRef.current, {
+        center: CITY_CENTER,
+        zoom: 12,
+        mapTypeControl: true,
+        streetViewControl: false,
+        fullscreenControl: true,
+      })
+
+      mapInstanceRef.current = map
+
+      // Sample heatmap data points based on the risky zones
+      const heatmapData = [
+        // Sector 7 - Industrial Area (High Risk - 87)
+        { lat: 19.04, lng: 72.82, weight: 0.87 },
+        { lat: 19.045, lng: 72.825, weight: 0.87 },
+        { lat: 19.035, lng: 72.815, weight: 0.85 },
+        
+        // Downtown Market (Risk - 72)
+        { lat: 19.09, lng: 72.89, weight: 0.72 },
+        { lat: 19.095, lng: 72.895, weight: 0.70 },
+        
+        // Railway Station (Risk - 68)
+        { lat: 19.075, lng: 72.880, weight: 0.68 },
+        { lat: 19.08, lng: 72.875, weight: 0.68 },
+        
+        // Sector 15 - Residential (Risk - 54)
+        { lat: 19.12, lng: 72.92, weight: 0.54 },
+        { lat: 19.125, lng: 72.925, weight: 0.52 },
+        
+        // Additional scattered data points
+        { lat: 19.055, lng: 72.835, weight: 0.60 },
+        { lat: 19.100, lng: 72.870, weight: 0.55 },
+        { lat: 19.065, lng: 72.905, weight: 0.48 },
+      ]
+
+      // Create heatmap layer
+      const heatmap = new google.maps.visualization.HeatmapLayer({
+        data: heatmapData.map(point => ({
+          location: new google.maps.LatLng(point.lat, point.lng),
+          weight: point.weight
+        })),
+        map: map,
+        radius: 35,
+        maxIntensity: 1,
+      })
+
+      return () => {
+        heatmap.setMap(null)
+      }
+    }
+
+    const timer = setTimeout(() => {
+      initializeMap()
+    }, 100)
+
+    return () => clearTimeout(timer)
+  }, [])
   return (
     <div className="p-4 lg:p-6 space-y-6">
       {/* Header */}
@@ -110,21 +177,10 @@ export default function AdminDashboard() {
             </Link>
           </CardHeader>
           <CardContent>
-            <div className="relative h-[300px] rounded-lg bg-muted overflow-hidden">
-              {/* Simulated heatmap visualization */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <MapPin className="h-12 w-12 text-muted-foreground/40 mx-auto" />
-                  <p className="mt-2 text-sm text-muted-foreground">Interactive city map</p>
-                  <p className="text-xs text-muted-foreground/60">Click to explore hotspots</p>
-                </div>
-              </div>
-              {/* Simulated hotspot markers */}
-              <div className="absolute top-1/4 left-1/3 h-8 w-8 rounded-full bg-destructive/30 animate-pulse" />
-              <div className="absolute top-1/2 right-1/4 h-6 w-6 rounded-full bg-warning/30 animate-pulse" />
-              <div className="absolute bottom-1/3 left-1/2 h-5 w-5 rounded-full bg-warning/30 animate-pulse" />
-              <div className="absolute top-2/3 left-1/4 h-4 w-4 rounded-full bg-success/30 animate-pulse" />
-            </div>
+            <div 
+              ref={mapRef}
+              className="relative h-[300px] rounded-lg bg-muted overflow-hidden"
+            />
           </CardContent>
         </Card>
 
