@@ -1,0 +1,43 @@
+generator py {
+provider = "prisma-client-py"
+}
+
+
+datasource db {
+provider = "postgresql"
+url = env("DATABASE_URL")
+}
+
+model PoliceOfficer {
+id String @id @default(uuid())
+clerkUserId String? @unique
+email String @unique
+name String?
+rank String?
+badge String?
+phone String?
+
+
+role Role @default(OFFICER)
+status OfficerStatus @default(INVITED)
+
+
+createdAt DateTime @default(now())
+
+
+@@index([status])
+@@index([role])
+}
+
+
+enum Role {
+ADMIN
+OFFICER
+}
+
+
+enum OfficerStatus {
+INVITED
+ACTIVE
+SUSPENDED
+}
