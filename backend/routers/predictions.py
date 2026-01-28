@@ -297,11 +297,11 @@ class CrimePredictionEngine:
             base_risk = zone.get('riskBase', zone.get('risk_base', 0.5))
             combined_risk = (confidence * 0.6 + base_risk * 0.4)
             
-            if combined_risk >= 0.65:
+            if combined_risk >= 0.50:
                 risk_level = "Critical"
-            elif combined_risk >= 0.5:
+            elif combined_risk >= 0.4:
                 risk_level = "High"
-            elif combined_risk >= 0.35:
+            elif combined_risk >= 0.25:
                 risk_level = "Medium"
             else:
                 risk_level = "Low"
@@ -689,6 +689,18 @@ async def generate_and_save_patrols(
                 'route_coords': rec.route_coords
             }
             
+            # Prepare checkpoints as JSON
+            checkpoints_data = [
+                {
+                    'id': cp['id'],
+                    'name': cp['name'],
+                    'lat': cp['lat'],
+                    'lng': cp['lng'],
+                    'zone': cp['zone']
+                }
+                for cp in rec.checkpoints
+            ]
+            
             # Create patrol with proper relation syntax
             patrol_data = {
                 "patrolNumber": patrol_number,
@@ -696,7 +708,7 @@ async def generate_and_save_patrols(
                 "scheduledStart": datetime.fromisoformat(rec.start_time),
                 "scheduledEnd": datetime.fromisoformat(rec.end_time),
                 "routeData": Json(route_data),
-                "checkpoints": rec.checkpoints,
+                "checkpoints": Json(checkpoints_data),
                 "totalCheckpoints": len(rec.checkpoints),
             }
             
