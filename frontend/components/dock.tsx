@@ -10,6 +10,7 @@ import {
   AnimatePresence
 } from 'motion/react';
 import React, { Children, cloneElement, useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export type DockItemData = {
   icon: React.ReactNode;
@@ -28,6 +29,9 @@ export type DockProps = {
   dockHeight?: number;
   magnification?: number;
   spring?: SpringOptions;
+  collapsible?: boolean;
+  defaultCollapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
 };
 
 type DockItemProps = {
@@ -153,48 +157,105 @@ export default function Dock({
   distance = 200,
   panelHeight = 68,
   dockHeight = 256,
-  baseItemSize = 50
+  baseItemSize = 50,
+  collapsible = true,
+  defaultCollapsed = false,
+  onCollapsedChange
 }: DockProps) {
   const mouseX = useMotionValue(Infinity);
   const isHovered = useMotionValue(0);
+  const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
 
   const maxHeight = useMemo(() => Math.max(dockHeight, magnification + magnification / 2 + 4), [dockHeight, magnification]);
   const heightRow = useTransform(isHovered, [0, 1], [panelHeight, maxHeight]);
   const height = useSpring(heightRow, spring);
 
+  const toggleCollapsed = () => {
+    const newValue = !isCollapsed;
+    setIsCollapsed(newValue);
+    onCollapsedChange?.(newValue);
+  };
+
+  // Update internal state when defaultCollapsed prop changes
+  useEffect(() => {
+    setIsCollapsed(defaultCollapsed);
+  }, [defaultCollapsed]);
+
   return (
-    <motion.div style={{height, scrollbarWidth: 'none' }} className="my-2 flex max-h-full items-center">
-      <motion.div
-        onMouseMove={({ pageY }) => {
-          isHovered.set(1);
-          mouseX.set(pageY);
-        }}
-        onMouseLeave={() => {
-          isHovered.set(0);
-          mouseX.set(Infinity);
-        }}
-        className={`${className} fixed left-4 top-1/2 transform -translate-y-1/2 flex flex-col items-center justify-center h-fit gap-3 rounded-2xl border border-border bg-card/80 backdrop-blur-xl px-2.5 py-4 shadow-xl`}
-        style={{ width: panelHeight }}
-        role="toolbar"
-        aria-label="Application dock"
-      >
-        {items.map((item, index) => (
-          <DockItem
-            key={index}
-            onClick={item.onClick}
-            className={item.className}
-            mouseX={mouseX}
-            spring={spring}
-            distance={distance}
-            magnification={magnification}
-            baseItemSize={baseItemSize}
-            isActive={item.isActive}
+    <>
+      {/* Collapsed state - show expand button */}
+      <AnimatePresence>
+        {isCollapsed && collapsible && (
+          <motion.button
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+            onClick={toggleCollapsed}
+            className="fixed left-0 top-1/2 -translate-y-1/2 z-50 flex items-center justify-center h-12 w-6 bg-card/90 backdrop-blur-xl border border-l-0 border-border rounded-r-lg shadow-lg hover:bg-card transition-colors group"
+            aria-label="Expand navigation dock"
           >
-            <DockIcon>{item.icon}</DockIcon>
-            <DockLabel>{item.label}</DockLabel>
-          </DockItem>
-        ))}
-      </motion.div>
-    </motion.div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* Expanded dock */}
+      <AnimatePresence>
+        {!isCollapsed && (
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+            style={{ height, scrollbarWidth: 'none' }} 
+            className="my-2 flex max-h-full items-center"
+          >
+            <motion.div
+              onMouseMove={({ pageY }) => {
+                isHovered.set(1);
+                mouseX.set(pageY);
+              }}
+              onMouseLeave={() => {
+                isHovered.set(0);
+                mouseX.set(Infinity);
+              }}
+              className={`${className} fixed left-4 top-1/2 transform -translate-y-1/2 flex flex-col items-center justify-center h-fit gap-3 rounded-2xl border border-border bg-card/80 backdrop-blur-xl px-2.5 py-4 shadow-xl`}
+              style={{ width: panelHeight }}
+              role="toolbar"
+              aria-label="Application dock"
+            >
+              {/* Collapse button at top */}
+              {collapsible && (
+                <button
+                  onClick={toggleCollapsed}
+                  className="flex items-center justify-center h-8 w-8 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors mb-1"
+                  aria-label="Collapse navigation dock"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+              )}
+
+              {items.map((item, index) => (
+                <DockItem
+                  key={index}
+                  onClick={item.onClick}
+                  className={item.className}
+                  mouseX={mouseX}
+                  spring={spring}
+                  distance={distance}
+                  magnification={magnification}
+                  baseItemSize={baseItemSize}
+                  isActive={item.isActive}
+                >
+                  <DockIcon>{item.icon}</DockIcon>
+                  <DockLabel>{item.label}</DockLabel>
+                </DockItem>
+              ))}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

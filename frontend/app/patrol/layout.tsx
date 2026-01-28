@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
 import { 
@@ -11,9 +11,7 @@ import {
   Video, 
   AlertTriangle, 
   History,
-  LogOut,
-  ChevronRight,
-  ChevronLeft
+  LogOut
 } from "lucide-react"
 import Dock, { type DockItemData } from "@/components/dock"
 
@@ -30,21 +28,6 @@ export default function PatrolLayout({ children }: { children: React.ReactNode }
   const pathname = usePathname()
   const router = useRouter()
   const [isDockVisible, setIsDockVisible] = useState(true)
-  const [shouldHideDockByDefault, setShouldHideDockByDefault] = useState(false)
-
-  useEffect(() => {
-    // Check if screen is small, hide dock by default on mobile
-    const checkScreenSize = () => {
-      setShouldHideDockByDefault(window.innerWidth < 1024)
-      if (window.innerWidth < 1024) {
-        setIsDockVisible(false)
-      }
-    }
-    
-    checkScreenSize()
-    window.addEventListener("resize", checkScreenSize)
-    return () => window.removeEventListener("resize", checkScreenSize)
-  }, [])
 
   const isActive = (href: string) => {
     if (href === "/patrol") return pathname === "/patrol"
@@ -100,37 +83,16 @@ export default function PatrolLayout({ children }: { children: React.ReactNode }
         </div>
       </main>
 
-      {/* Dock Toggle Button - shown when dock is hidden */}
-      {!isDockVisible && (
-        <button
-          onClick={() => setIsDockVisible(true)}
-          className="fixed left-0 top-1/2 -translate-y-1/2 z-50 flex items-center justify-center h-12 w-6 bg-card/90 backdrop-blur-xl border border-l-0 border-border rounded-r-lg shadow-lg hover:bg-card transition-all duration-200 group"
-          aria-label="Show navigation dock"
-        >
-          <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-        </button>
-      )}
-
-      {/* Dock Navigation with collapse button */}
-      <div className={`fixed top-1/2 left-0 -translate-y-1/2 z-50 flex justify-center transition-all duration-300 ${isDockVisible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-full pointer-events-none"}`}>
-        {/* Collapse button - positioned at right side of dock */}
-        {isDockVisible && (
-          <button
-            onClick={() => setIsDockVisible(false)}
-            className="absolute -right-14 flex items-center justify-center h-10 w-10 bg-card/90 backdrop-blur-xl border border-border rounded-full shadow-lg hover:bg-card transition-all duration-200 group"
-            aria-label="Hide navigation dock"
-          >
-            <ChevronLeft className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          </button>
-        )}
-        <Dock 
-          items={dockItems}
-          baseItemSize={44}
-          magnification={64}
-          distance={120}
-          panelHeight={68}
-        />
-      </div>
+      {/* Dock Navigation */}
+      <Dock 
+        items={dockItems}
+        baseItemSize={44}
+        magnification={64}
+        distance={120}
+        panelHeight={68}
+        collapsible={true}
+        onCollapsedChange={(isCollapsed) => setIsDockVisible(!isCollapsed)}
+      />
     </div>
   )
 }
