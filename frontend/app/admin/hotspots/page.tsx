@@ -184,11 +184,17 @@ export default function HotspotAnalysis() {
 
       mapInstanceRef.current = map
       
-      // Wait for map to be fully loaded
-      google.maps.event.addListenerOnce(map, 'idle', () => {
-        console.log("✓ Google Maps fully initialized and idle")
-        setMapReady(true)
-      })
+
+google.maps.event.addListenerOnce(map, "idle", () => {
+  console.log("✓ Map fully rendered and idle")
+  setMapReady(true)
+
+  const projection = map.getProjection()
+  if (projection) {
+    setMapProjection(projection)
+  }
+})
+
       
       const projection = map.getProjection()
       if (projection) {
