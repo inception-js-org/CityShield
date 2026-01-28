@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { 
   Bell,
   AlertTriangle,
@@ -8,10 +8,9 @@ import {
   Clock,
   MapPin,
   CheckCircle,
-  XCircle,
-  ChevronRight,
   Filter,
-  Link as LinkIcon
+  Link as LinkIcon,
+  RefreshCw
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -22,35 +21,74 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-
-// Mock complaints data
-const complaints = [
-  { id: "C-001", type: "Noise", description: "Loud music from neighboring building", location: "Sector 15, Block A", time: "2 hours ago", status: "Open", priority: "Low" },
-  { id: "C-002", type: "Suspicious Activity", description: "Unknown person loitering near school", location: "Downtown, Main Street", time: "3 hours ago", status: "Investigating", priority: "High" },
-  { id: "C-003", type: "Traffic", description: "Illegal parking blocking road", location: "Sector 7, Industrial Road", time: "5 hours ago", status: "Open", priority: "Medium" },
-  { id: "C-004", type: "Public Safety", description: "Street light not working", location: "Railway Area, Platform 2", time: "8 hours ago", status: "Resolved", priority: "Low" },
-  { id: "C-005", type: "Vandalism", description: "Graffiti on public property", location: "City Park", time: "1 day ago", status: "Resolved", priority: "Low" },
-]
-
-// Mock alerts data
-const alerts = [
-  { id: 1, type: "emergency", message: "Backup requested by Unit P-03 at Railway Station", time: "5 min ago", acknowledged: false },
-  { id: 2, type: "hotspot", message: "New high-risk zone detected in Sector 7", time: "15 min ago", acknowledged: true },
-  { id: 3, type: "system", message: "Patrol P-05 has ended shift", time: "1 hour ago", acknowledged: true },
-  { id: 4, type: "fir", message: "New FIR filed - Theft reported at Mall", time: "2 hours ago", acknowledged: true },
-  { id: 5, type: "patrol", message: "Unit P-02 checkpoint completed", time: "3 hours ago", acknowledged: true },
-]
+import { complaintsAPI, alertsAPI } from "@/lib/api"
+import type { Complaint, Alert } from "@/app/api/index"
 
 export default function ComplaintsAlerts() {
   const [activeTab, setActiveTab] = useState<"complaints" | "alerts">("complaints")
   const [statusFilter, setStatusFilter] = useState("All")
   const [priorityFilter, setPriorityFilter] = useState("All")
+  
+  const [complaints, setComplaints] = useState<Complaint[]>([])
+  const [alerts, setAlerts] = useState<Alert[]>([])
+  const [stats, setStats] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
-  const filteredComplaints = complaints.filter(c => {
-    const matchesStatus = statusFilter === "All" || c.status === statusFilter
-    const matchesPriority = priorityFilter === "All" || c.priority === priorityFilter
-    return matchesStatus && matchesPriority
-  })
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      const [complaintsData, alertsData, statsData] = await Promise.all([
+        complaintsAPI.getAll({
+          status: statusFilter !== "All" ? statusFilter : undefined,
+          priority: priorityFilter !== "All" ? priorityFilter : undefined
+        }),
+        alertsAPI.getAll({ limit: 20 }),
+        complaintsAPI.getStats()
+      ])
+      setComplaints(complaintsData)
+      setAlerts(alertsData)
+      setStats(statsData)
+    } catch (err) {
+      console.error("Failed to fetch data:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchData()
+  }, [statusFilter, priorityFilter])
+
+  const handleResolve = async (id: string) => {
+    const resolution = prompt("Enter resolution notes:")
+    if (resolution) {
+      await complaintsAPI.resolve(id, resolution)
+      fetchData()
+    }
+  }
+
+  const handleAcknowledge = async (id: string) => {
+    await alertsAPI.acknowledge(id)
+    fetchData()
+  }
+
+  const handleMarkAllRead = async () => {
+    await alertsAPI.acknowledgeAll()
+    fetchData()
+  }
+
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const days = Math.floor(hours / 24)
+    
+    if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`
+    if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`
+    const minutes = Math.floor(diff / (1000 * 60))
+    return `${minutes} min ago`
+  }
 
   const unacknowledgedAlerts = alerts.filter(a => !a.acknowledged).length
 
@@ -62,6 +100,10 @@ export default function ComplaintsAlerts() {
           <h1 className="text-2xl font-bold text-foreground">Complaints & Alerts</h1>
           <p className="text-muted-foreground">Public feedback and system notifications</p>
         </div>
+        <Button variant="outline" size="sm" onClick={fetchData} className="gap-2">
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
       {/* Tabs */}
@@ -74,7 +116,7 @@ export default function ComplaintsAlerts() {
           <MessageSquare className="h-4 w-4" />
           Complaints
           <span className="ml-1 rounded-full bg-primary-foreground/20 px-2 py-0.5 text-xs">
-            {complaints.filter(c => c.status !== "Resolved").length}
+            {stats?.open || 0}
           </span>
         </Button>
         <Button
@@ -111,9 +153,9 @@ export default function ComplaintsAlerts() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="All">All Status</SelectItem>
-                      <SelectItem value="Open">Open</SelectItem>
-                      <SelectItem value="Investigating">Investigating</SelectItem>
-                      <SelectItem value="Resolved">Resolved</SelectItem>
+                      <SelectItem value="OPEN">Open</SelectItem>
+                      <SelectItem value="INVESTIGATING">Investigating</SelectItem>
+                      <SelectItem value="RESOLVED">Resolved</SelectItem>
                     </SelectContent>
                   </Select>
                   <Select value={priorityFilter} onValueChange={setPriorityFilter}>
@@ -122,9 +164,9 @@ export default function ComplaintsAlerts() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="All">All Priority</SelectItem>
-                      <SelectItem value="High">High</SelectItem>
-                      <SelectItem value="Medium">Medium</SelectItem>
-                      <SelectItem value="Low">Low</SelectItem>
+                      <SelectItem value="HIGH">High</SelectItem>
+                      <SelectItem value="MEDIUM">Medium</SelectItem>
+                      <SelectItem value="LOW">Low</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -133,18 +175,18 @@ export default function ComplaintsAlerts() {
 
             {/* Complaints Cards */}
             <div className="space-y-3">
-              {filteredComplaints.map((complaint) => (
+              {complaints.map((complaint) => (
                 <Card key={complaint.id}>
                   <CardContent className="p-4">
                     <div className="flex items-start gap-4">
                       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                        complaint.priority === "High" ? "bg-destructive/10" :
-                        complaint.priority === "Medium" ? "bg-warning/10" :
+                        complaint.priority === "HIGH" ? "bg-destructive/10" :
+                        complaint.priority === "MEDIUM" ? "bg-warning/10" :
                         "bg-muted"
                       }`}>
                         <MessageSquare className={`h-5 w-5 ${
-                          complaint.priority === "High" ? "text-destructive" :
-                          complaint.priority === "Medium" ? "text-warning-foreground" :
+                          complaint.priority === "HIGH" ? "text-destructive" :
+                          complaint.priority === "MEDIUM" ? "text-warning-foreground" :
                           "text-muted-foreground"
                         }`} />
                       </div>
@@ -152,10 +194,12 @@ export default function ComplaintsAlerts() {
                         <div className="flex items-start justify-between gap-2">
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="font-mono text-xs text-muted-foreground">{complaint.id}</span>
+                              <span className="font-mono text-xs text-muted-foreground">
+                                {complaint.complaintNumber}
+                              </span>
                               <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                                complaint.status === "Open" ? "bg-destructive/10 text-destructive" :
-                                complaint.status === "Investigating" ? "bg-warning/10 text-warning-foreground" :
+                                complaint.status === "OPEN" ? "bg-destructive/10 text-destructive" :
+                                complaint.status === "INVESTIGATING" ? "bg-warning/10 text-warning-foreground" :
                                 "bg-success/10 text-success"
                               }`}>
                                 {complaint.status}
@@ -165,8 +209,8 @@ export default function ComplaintsAlerts() {
                             <p className="text-sm text-muted-foreground">{complaint.description}</p>
                           </div>
                           <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${
-                            complaint.priority === "High" ? "bg-destructive/10 text-destructive" :
-                            complaint.priority === "Medium" ? "bg-warning/10 text-warning-foreground" :
+                            complaint.priority === "HIGH" ? "bg-destructive/10 text-destructive" :
+                            complaint.priority === "MEDIUM" ? "bg-warning/10 text-warning-foreground" :
                             "bg-muted text-muted-foreground"
                           }`}>
                             {complaint.priority}
@@ -179,13 +223,18 @@ export default function ComplaintsAlerts() {
                           </span>
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {complaint.time}
+                            {formatTime(complaint.createdAt)}
                           </span>
                         </div>
                         <div className="mt-3 flex gap-2">
-                          {complaint.status !== "Resolved" && (
+                          {complaint.status !== "RESOLVED" && complaint.status !== "CLOSED" && (
                             <>
-                              <Button size="sm" variant="outline" className="gap-1 bg-transparent">
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="gap-1 bg-transparent"
+                                onClick={() => handleResolve(complaint.id)}
+                              >
                                 <CheckCircle className="h-3 w-3" />
                                 Resolve
                               </Button>
@@ -218,19 +267,19 @@ export default function ComplaintsAlerts() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Open</span>
                   <span className="text-sm font-medium text-destructive">
-                    {complaints.filter(c => c.status === "Open").length}
+                    {stats?.open || 0}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Investigating</span>
                   <span className="text-sm font-medium text-warning-foreground">
-                    {complaints.filter(c => c.status === "Investigating").length}
+                    {stats?.investigating || 0}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Resolved</span>
                   <span className="text-sm font-medium text-success">
-                    {complaints.filter(c => c.status === "Resolved").length}
+                    {stats?.resolved || 0}
                   </span>
                 </div>
               </CardContent>
@@ -241,15 +290,12 @@ export default function ComplaintsAlerts() {
                 <CardTitle className="text-base">By Type</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {["Noise", "Suspicious Activity", "Traffic", "Public Safety", "Vandalism"].map(type => {
-                  const count = complaints.filter(c => c.type === type).length
-                  return (
-                    <div key={type} className="flex items-center justify-between p-2 rounded bg-muted/50">
-                      <span className="text-sm text-foreground">{type}</span>
-                      <span className="text-sm text-muted-foreground">{count}</span>
-                    </div>
-                  )
-                })}
+                {stats?.byType && Object.entries(stats.byType).map(([type, count]) => (
+                  <div key={type} className="flex items-center justify-between p-2 rounded bg-muted/50">
+                    <span className="text-sm text-foreground">{type}</span>
+                    <span className="text-sm text-muted-foreground">{count as number}</span>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </div>
@@ -260,7 +306,7 @@ export default function ComplaintsAlerts() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg">Alert Timeline</CardTitle>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleMarkAllRead}>
                 Mark All Read
               </Button>
             </CardHeader>
@@ -271,13 +317,13 @@ export default function ComplaintsAlerts() {
                     {/* Timeline line */}
                     <div className="flex flex-col items-center">
                       <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                        alert.type === "emergency" ? "bg-destructive/10" :
-                        alert.type === "hotspot" ? "bg-warning/10" :
+                        alert.type === "EMERGENCY" ? "bg-destructive/10" :
+                        alert.type === "HOTSPOT" ? "bg-warning/10" :
                         "bg-muted"
                       }`}>
-                        {alert.type === "emergency" ? (
+                        {alert.type === "EMERGENCY" ? (
                           <AlertTriangle className="h-4 w-4 text-destructive" />
-                        ) : alert.type === "hotspot" ? (
+                        ) : alert.type === "HOTSPOT" ? (
                           <MapPin className="h-4 w-4 text-warning-foreground" />
                         ) : (
                           <Bell className="h-4 w-4 text-muted-foreground" />
@@ -295,10 +341,16 @@ export default function ComplaintsAlerts() {
                           <p className={`text-sm ${!alert.acknowledged ? "font-medium text-foreground" : "text-foreground"}`}>
                             {alert.message}
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">{alert.time}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {formatTime(alert.createdAt)}
+                          </p>
                         </div>
                         {!alert.acknowledged && (
-                          <Button size="sm" variant="outline">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleAcknowledge(alert.id)}
+                          >
                             Acknowledge
                           </Button>
                         )}

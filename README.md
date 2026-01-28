@@ -52,7 +52,7 @@ npx prisma migrate dev
 If version mismatch happens:
 
 ```bash
-npx prisma@5.17.0 generate
+npx prisma@5.8.0 generate
 ```
 
 ## 7️⃣ Run Backend Server

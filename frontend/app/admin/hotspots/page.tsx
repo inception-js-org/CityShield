@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { 
   Layers, 
   MapPin, 
@@ -15,34 +15,101 @@ import {
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-
-// Mock data for hotspots
-const hotspots = [
-  { id: 1, name: "Sector 7 - Industrial Area", risk: 87, crimeCount: 23, trend: "+12%", topCrime: "Theft" },
-  { id: 2, name: "Downtown Market", risk: 72, crimeCount: 18, trend: "-5%", topCrime: "Pickpocketing" },
-  { id: 3, name: "Railway Station", risk: 68, crimeCount: 15, trend: "+8%", topCrime: "Assault" },
-  { id: 4, name: "Sector 15 - Residential", risk: 54, crimeCount: 12, trend: "-2%", topCrime: "Burglary" },
-  { id: 5, name: "Highway Exit 4", risk: 45, crimeCount: 8, trend: "+3%", topCrime: "Vehicle Theft" },
-]
-
-const crimeTypeTrends = [
-  { type: "Theft", count: 45, percentage: 28 },
-  { type: "Assault", count: 32, percentage: 20 },
-  { type: "Burglary", count: 28, percentage: 17 },
-  { type: "Vehicle Theft", count: 24, percentage: 15 },
-  { type: "Vandalism", count: 18, percentage: 11 },
-  { type: "Other", count: 15, percentage: 9 },
-]
-
-const timeBasedRisk = [
-  { time: "12 AM - 6 AM", risk: "High", color: "destructive" },
-  { time: "6 AM - 12 PM", risk: "Low", color: "success" },
-  { time: "12 PM - 6 PM", risk: "Medium", color: "warning" },
-  { time: "6 PM - 12 AM", risk: "High", color: "destructive" },
-]
+import { zonesAPI, firsAPI, complaintsAPI } from "@/lib/api"
+import type { Zone, FIR, Complaint } from "@/app/api/index"
 
 export default function HotspotAnalysis() {
   const [activeLayer, setActiveLayer] = useState<"fir" | "heatmap" | "predicted">("heatmap")
+  const [loading, setLoading] = useState(true)
+  const [zones, setZones] = useState<Zone[]>([])
+  const [firs, setFirs] = useState<FIR[]>([])
+  const [complaints, setComplaints] = useState<Complaint[]>([])
+
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      const [zonesData, firsData, complaintsData] = await Promise.all([
+        zonesAPI.getAll(),
+        firsAPI.getRecent(50),
+        complaintsAPI.getAll()
+      ])
+      setZones(Array.isArray(zonesData) ? zonesData : [])
+      setFirs(Array.isArray(firsData) ? firsData : [])
+      setComplaints(Array.isArray(complaintsData) ? complaintsData : [])
+    } catch (err) {
+      console.error("Failed to fetch data:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  // Calculate hotspots from zones data
+  const hotspots = zones
+    .map(zone => {
+      const zoneFirs = firs.filter(f => f.zoneId === zone.id)
+      const zoneComplaints = complaints.filter(c => c.zoneId === zone.id)
+      const incidentCount = zoneFirs.length + zoneComplaints.length
+      
+      // Get most common crime type
+      const crimeTypes: Record<string, number> = {}
+      zoneFirs.forEach(f => {
+        crimeTypes[f.incidentType] = (crimeTypes[f.incidentType] || 0) + 1
+      })
+      const topCrime = Object.entries(crimeTypes).sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A"
+
+      return {
+        id: zone.id,
+        name: zone.name,
+        risk: Math.round(zone.riskBase * 100),
+        crimeCount: incidentCount,
+        trend: zone.riskScore && zone.riskScore > zone.riskBase ? `+${Math.round((zone.riskScore - zone.riskBase) * 100)}%` : "-5%",
+        topCrime,
+        coords: zone.coords
+      }
+    })
+    .sort((a, b) => b.risk - a.risk)
+    .slice(0, 5)
+
+  // Calculate crime type distribution
+  const crimeTypeTrends = (() => {
+    const typeCounts: Record<string, number> = {}
+    firs.forEach(f => {
+      typeCounts[f.incidentType] = (typeCounts[f.incidentType] || 0) + 1
+    })
+    const total = firs.length || 1
+    return Object.entries(typeCounts)
+      .map(([type, count]) => ({
+        type,
+        count,
+        percentage: Math.round((count / total) * 100)
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6)
+  })()
+
+  // Time-based risk analysis
+  const timeBasedRisk = [
+    { time: "12 AM - 6 AM", risk: "High", color: "destructive" },
+    { time: "6 AM - 12 PM", risk: "Low", color: "success" },
+    { time: "12 PM - 6 PM", risk: "Medium", color: "warning" },
+    { time: "6 PM - 12 AM", risk: "High", color: "destructive" },
+  ]
+
+  // Find highest risk zone for AI prediction
+  const highestRiskZone = zones.reduce((max, zone) => 
+    zone.riskBase > (max?.riskBase || 0) ? zone : max, zones[0])
+
+  if (loading) {
+    return (
+      <div className="p-4 lg:p-6 flex items-center justify-center min-h-[400px]">
+        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <div className="p-4 lg:p-6 space-y-6">
@@ -57,7 +124,7 @@ export default function HotspotAnalysis() {
             <Download className="h-4 w-4" />
             Export
           </Button>
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={fetchData}>
             <RefreshCw className="h-4 w-4" />
             Refresh Data
           </Button>
@@ -79,7 +146,7 @@ export default function HotspotAnalysis() {
                   className="gap-2"
                 >
                   <MapPin className="h-4 w-4" />
-                  FIR Points
+                  FIR Points ({firs.length})
                 </Button>
                 <Button
                   variant={activeLayer === "heatmap" ? "default" : "outline"}
@@ -122,34 +189,54 @@ export default function HotspotAnalysis() {
                   </div>
                   
                   {/* Heatmap zones */}
-                  {activeLayer === "heatmap" && (
-                    <>
-                      <div className="absolute top-1/4 left-1/3 h-32 w-32 rounded-full bg-destructive/30 blur-xl" />
-                      <div className="absolute top-1/2 right-1/4 h-24 w-24 rounded-full bg-warning/30 blur-xl" />
-                      <div className="absolute bottom-1/3 left-1/2 h-20 w-20 rounded-full bg-warning/20 blur-xl" />
-                      <div className="absolute top-2/3 left-1/4 h-16 w-16 rounded-full bg-success/30 blur-xl" />
-                    </>
-                  )}
+                  {activeLayer === "heatmap" && zones.slice(0, 4).map((zone, i) => (
+                    <div 
+                      key={zone.id}
+                      className={`absolute rounded-full blur-xl ${
+                        zone.riskBase >= 0.6 ? "bg-destructive/30" :
+                        zone.riskBase >= 0.4 ? "bg-warning/30" :
+                        "bg-success/30"
+                      }`}
+                      style={{
+                        top: `${20 + i * 20}%`,
+                        left: `${25 + i * 15}%`,
+                        width: `${80 + zone.riskBase * 50}px`,
+                        height: `${80 + zone.riskBase * 50}px`,
+                      }}
+                    />
+                  ))}
 
                   {/* FIR Points */}
-                  {activeLayer === "fir" && (
-                    <>
-                      <div className="absolute top-[20%] left-[30%] h-4 w-4 rounded-full bg-destructive border-2 border-card shadow-lg" />
-                      <div className="absolute top-[35%] left-[45%] h-4 w-4 rounded-full bg-destructive border-2 border-card shadow-lg" />
-                      <div className="absolute top-[50%] right-[25%] h-4 w-4 rounded-full bg-warning border-2 border-card shadow-lg" />
-                      <div className="absolute bottom-[30%] left-[40%] h-4 w-4 rounded-full bg-warning border-2 border-card shadow-lg" />
-                      <div className="absolute top-[60%] left-[25%] h-4 w-4 rounded-full bg-success border-2 border-card shadow-lg" />
-                    </>
-                  )}
+                  {activeLayer === "fir" && firs.slice(0, 10).map((fir, i) => (
+                    <div 
+                      key={fir.id}
+                      className={`absolute h-4 w-4 rounded-full border-2 border-card shadow-lg ${
+                        fir.status === "FILED" ? "bg-destructive" :
+                        fir.status === "UNDER_INVESTIGATION" ? "bg-warning" :
+                        "bg-success"
+                      }`}
+                      style={{
+                        top: `${15 + (i * 8)}%`,
+                        left: `${20 + (i * 7)}%`,
+                      }}
+                    />
+                  ))}
 
                   {/* Predicted zones */}
-                  {activeLayer === "predicted" && (
-                    <>
-                      <div className="absolute top-[15%] left-[25%] h-24 w-24 rounded-lg border-2 border-dashed border-destructive bg-destructive/10" />
-                      <div className="absolute top-[45%] right-[20%] h-20 w-20 rounded-lg border-2 border-dashed border-warning bg-warning/10" />
-                      <div className="absolute bottom-[25%] left-[35%] h-16 w-16 rounded-lg border-2 border-dashed border-warning bg-warning/10" />
-                    </>
-                  )}
+                  {activeLayer === "predicted" && zones.filter(z => z.riskBase >= 0.5).slice(0, 3).map((zone, i) => (
+                    <div 
+                      key={zone.id}
+                      className={`absolute rounded-lg border-2 border-dashed ${
+                        zone.riskBase >= 0.6 ? "border-destructive bg-destructive/10" : "border-warning bg-warning/10"
+                      }`}
+                      style={{
+                        top: `${15 + i * 25}%`,
+                        left: `${20 + i * 20}%`,
+                        width: `${60 + zone.riskBase * 40}px`,
+                        height: `${60 + zone.riskBase * 40}px`,
+                      }}
+                    />
+                  ))}
                 </div>
 
                 {/* Legend */}
@@ -186,36 +273,42 @@ export default function HotspotAnalysis() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {hotspots.map((spot, i) => (
-                <button
-                  key={spot.id}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors text-left"
-                >
-                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm font-medium ${
-                    i === 0 ? "bg-destructive/10 text-destructive" :
-                    i < 3 ? "bg-warning/10 text-warning-foreground" :
-                    "bg-muted text-muted-foreground"
-                  }`}>
-                    {i + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{spot.name}</p>
-                    <p className="text-xs text-muted-foreground">{spot.crimeCount} incidents - {spot.topCrime}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className={`text-sm font-semibold ${
-                      spot.risk >= 70 ? "text-destructive" :
-                      spot.risk >= 50 ? "text-warning-foreground" :
-                      "text-success"
+              {hotspots.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No zone data available
+                </p>
+              ) : (
+                hotspots.map((spot, i) => (
+                  <button
+                    key={spot.id}
+                    className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors text-left"
+                  >
+                    <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm font-medium ${
+                      i === 0 ? "bg-destructive/10 text-destructive" :
+                      i < 3 ? "bg-warning/10 text-warning-foreground" :
+                      "bg-muted text-muted-foreground"
                     }`}>
-                      {spot.risk}%
-                    </p>
-                    <p className={`text-xs ${spot.trend.startsWith("+") ? "text-destructive" : "text-success"}`}>
-                      {spot.trend}
-                    </p>
-                  </div>
-                </button>
-              ))}
+                      {i + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{spot.name}</p>
+                      <p className="text-xs text-muted-foreground">{spot.crimeCount} incidents - {spot.topCrime}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-sm font-semibold ${
+                        spot.risk >= 70 ? "text-destructive" :
+                        spot.risk >= 50 ? "text-warning-foreground" :
+                        "text-success"
+                      }`}>
+                        {spot.risk}%
+                      </p>
+                      <p className={`text-xs ${spot.trend.startsWith("+") ? "text-destructive" : "text-success"}`}>
+                        {spot.trend}
+                      </p>
+                    </div>
+                  </button>
+                ))
+              )}
             </CardContent>
           </Card>
 
@@ -228,20 +321,26 @@ export default function HotspotAnalysis() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {crimeTypeTrends.map((crime) => (
-                <div key={crime.type} className="space-y-1">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-foreground">{crime.type}</span>
-                    <span className="text-muted-foreground">{crime.count}</span>
+              {crimeTypeTrends.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No FIR data available
+                </p>
+              ) : (
+                crimeTypeTrends.map((crime) => (
+                  <div key={crime.type} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-foreground">{crime.type}</span>
+                      <span className="text-muted-foreground">{crime.count}</span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                      <div 
+                        className="h-full rounded-full bg-primary"
+                        style={{ width: `${crime.percentage}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                    <div 
-                      className="h-full rounded-full bg-primary"
-                      style={{ width: `${crime.percentage}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </CardContent>
           </Card>
 
@@ -286,7 +385,9 @@ export default function HotspotAnalysis() {
                 <div className="flex-1">
                   <p className="text-sm font-medium text-foreground">AI Prediction</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    High risk predicted for Sector 7 tonight (10 PM - 2 AM). Consider increasing patrol coverage.
+                    {highestRiskZone 
+                      ? `High risk predicted for ${highestRiskZone.name} tonight (10 PM - 2 AM). Consider increasing patrol coverage.`
+                      : "No predictions available yet. Add more zone data."}
                   </p>
                   <Button size="sm" className="mt-3 gap-1">
                     Generate Patrol Plan
