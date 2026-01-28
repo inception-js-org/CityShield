@@ -106,6 +106,11 @@ async def get_item(item_id: str):
 from routes.officers import router as officers_router
 app.include_router(officers_router)
 
+# ================= HOTSPOTS ROUTES =================
+
+from routes.hotspots import router as hotspots_router
+app.include_router(hotspots_router)
+
 # ================= ENTRYPOINT =================
 
 if __name__ == "__main__":

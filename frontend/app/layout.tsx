@@ -41,7 +41,7 @@ export default function RootLayout({
       <head>
         {apiKey && (
           <script
-            src={`https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker`}
+            src={`https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker,visualization`}
             async
             defer
           />

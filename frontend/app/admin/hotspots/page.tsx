@@ -1,303 +1,775 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { 
-  Layers, 
+  Search,
   MapPin, 
   TrendingUp, 
   Clock, 
   AlertTriangle,
-  Sun,
-  Moon,
-  Download,
-  RefreshCw,
-  ChevronRight
+  ChevronDown,
+  SlidersHorizontal,
+  Bookmark,
+  X,
+  Layers,
+  Info
 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
-// Mock data for hotspots
-const hotspots = [
-  { id: 1, name: "Sector 7 - Industrial Area", risk: 87, crimeCount: 23, trend: "+12%", topCrime: "Theft" },
-  { id: 2, name: "Downtown Market", risk: 72, crimeCount: 18, trend: "-5%", topCrime: "Pickpocketing" },
-  { id: 3, name: "Railway Station", risk: 68, crimeCount: 15, trend: "+8%", topCrime: "Assault" },
-  { id: 4, name: "Sector 15 - Residential", risk: 54, crimeCount: 12, trend: "-2%", topCrime: "Burglary" },
-  { id: 5, name: "Highway Exit 4", risk: 45, crimeCount: 8, trend: "+3%", topCrime: "Vehicle Theft" },
-]
 
-const crimeTypeTrends = [
-  { type: "Theft", count: 45, percentage: 28 },
-  { type: "Assault", count: 32, percentage: 20 },
-  { type: "Burglary", count: 28, percentage: 17 },
-  { type: "Vehicle Theft", count: 24, percentage: 15 },
-  { type: "Vandalism", count: 18, percentage: 11 },
-  { type: "Other", count: 15, percentage: 9 },
-]
+interface Hotspot {
+  id: number
+  name: string
+  zone_id: string
+  risk: number
+  crimeCount: number
+  trend: string
+  topCrime: string
+  status: string
+  coordinates: {
+    latitude: number
+    longitude: number
+    top: string
+    left: string
+  }
+  timeActive: string
+  zoneType: string
+  incidentCount: number
+  averageSeverity: number
+}
 
-const timeBasedRisk = [
-  { time: "12 AM - 6 AM", risk: "High", color: "destructive" },
-  { time: "6 AM - 12 PM", risk: "Low", color: "success" },
-  { time: "12 PM - 6 PM", risk: "Medium", color: "warning" },
-  { time: "6 PM - 12 AM", risk: "High", color: "destructive" },
-]
+interface CrimeCoordinate {
+  latitude: number
+  longitude: number
+  severity: number
+  category: string
+  count: number
+}
+
+type FilterStatus = "all" | "high" | "medium" | "low"
+type SortBy = "risk" | "incidents" | "name"
 
 export default function HotspotAnalysis() {
-  const [activeLayer, setActiveLayer] = useState<"fir" | "heatmap" | "predicted">("heatmap")
+  const [hotspots, setHotspots] = useState<Hotspot[]>([])
+  const [allCoordinates, setAllCoordinates] = useState<CrimeCoordinate[]>([])
+  const [selectedHotspot, setSelectedHotspot] = useState<Hotspot | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all")
+  const [sortBy, setSortBy] = useState<SortBy>("risk")
+  const [bookmarkedIds, setBookmarkedIds] = useState<number[]>([])
+  const [activeLayer, setActiveLayer] = useState<"heatmap" | "points" | "predicted">("heatmap")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  // State for storing map projection for converting lat/lng to screen coordinates
+  const [mapProjection, setMapProjection] = useState<google.maps.Projection | null>(null)
+  const [screenPos, setScreenPos] = useState<{x: number, y: number} | null>(null)
+  const mapRef = useRef<HTMLDivElement>(null)
+  const mapInstanceRef = useRef<google.maps.Map | null>(null)
+  const markersRef = useRef<google.maps.Marker[]>([])
+  const heatmapRef = useRef<google.maps.visualization.HeatmapLayer | null>(null)
+
+  // Borivali bounds
+  const BORIVALI_BOUNDS = {
+    north: 19.255,
+    south: 19.210,
+    west: 72.800,
+    east: 72.875,
+  }
+
+  const BORIVALI_CENTER = { lat: 19.23, lng: 72.86 }
+
+  // Initialize map and fetch hotspots
+  useEffect(() => {
+    const initializeMap = () => {
+      if (!mapRef.current || !window.google) return
+
+      const map = new google.maps.Map(mapRef.current, {
+        center: BORIVALI_CENTER,
+        zoom: 14,
+        restriction: {
+          latLngBounds: BORIVALI_BOUNDS,
+          strictBounds: true,
+        },
+        mapTypeControl: true,
+        streetViewControl: false,
+      })
+
+      mapInstanceRef.current = map
+      
+      // Store projection for converting lat/lng to screen coordinates
+      // Try to get projection immediately, then listen for changes
+      const projection = map.getProjection()
+      if (projection) {
+        console.log("✓ Map projection captured immediately")
+        setMapProjection(projection)
+      }
+      
+      map.addListener('projection_changed', () => {
+        const newProjection = map.getProjection()
+        if (newProjection) {
+          console.log("✓ Map projection updated (projection_changed event)")
+          setMapProjection(newProjection)
+        }
+      })
+    }
+
+    const fetchHotspots = async () => {
+      try {
+        setIsLoading(true)
+        console.log("🔄 Fetching hotspots from backend...")
+        const response = await fetch("http://localhost:8000/api/hotspots/data")
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error(`❌ Hotspots API error (${response.status}):`, errorText)
+          throw new Error(`Failed to fetch hotspots: ${response.status}`)
+        }
+        const data = await response.json()
+        
+        // Transform API data to match interface
+        const transformedData: Hotspot[] = data.map((item: any) => {
+          // Ensure coordinates are valid numbers with fallbacks
+          const latitude = Number(item.latitude) || Number(item.coordinates?.latitude) || BORIVALI_CENTER.lat
+          const longitude = Number(item.longitude) || Number(item.coordinates?.longitude) || BORIVALI_CENTER.lng
+          
+          return {
+            id: item.id,
+            name: item.name,
+            zone_id: item.zone_id,
+            risk: Number(item.risk || 0),
+            crimeCount: Number(item.crimeCount || 0),
+            trend: item.trend || "+12%",
+            topCrime: item.topCrime || "Unknown",
+            status: item.status || "Active",
+            coordinates: {
+              latitude: isNaN(latitude) ? BORIVALI_CENTER.lat : latitude,
+              longitude: isNaN(longitude) ? BORIVALI_CENTER.lng : longitude,
+              top: item.coordinates?.top || "50%",
+              left: item.coordinates?.left || "50%",
+            },
+            timeActive: item.timeActive || "Active 24/7",
+            zoneType: item.zoneType || "urban",
+            incidentCount: Number(item.incidentCount || item.crimeCount || 0),
+            averageSeverity: Number(item.averageSeverity || 2.5),
+          }
+        })
+        
+        setHotspots(transformedData)
+        console.log(`✓ Loaded ${transformedData.length} hotspots from API`)
+        if (transformedData.length > 0) {
+          console.log(`→ First hotspot selected: ${transformedData[0].name}`)
+          setSelectedHotspot(transformedData[0])
+          setBookmarkedIds([transformedData[0].id, transformedData[2]?.id].filter(Boolean) as number[])
+        }
+        setError(null)
+      } catch (err) {
+        console.error("Error fetching hotspots:", err)
+        setError("Failed to load hotspots data. Please check if the backend is running.")
+        console.warn("⚠️ Start backend with: cd backend && python app.py")
+        setHotspots([])
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    const fetchAllCoordinates = async () => {
+      try {
+        console.log("🔄 Fetching all coordinates from backend...")
+        const response = await fetch("http://localhost:8000/api/hotspots/all-coordinates", {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        })
+        
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error(`❌ Coordinates API error (${response.status}):`, errorText)
+          console.warn("⚠️ Using hotspots as fallback for coordinates")
+          // Fallback: derive coordinates from hotspots
+          if (hotspots.length > 0) {
+            const fallbackCoords = hotspots.map(spot => ({
+              latitude: spot.coordinates.latitude,
+              longitude: spot.coordinates.longitude,
+              severity: spot.averageSeverity,
+              category: spot.topCrime,
+              count: spot.crimeCount
+            }))
+            console.log(`✓ Using ${fallbackCoords.length} hotspots as coordinate source`)
+            setAllCoordinates(fallbackCoords)
+          }
+          return
+        }
+        
+        const data = await response.json()
+        console.log(`✓ Fetched ${data.length} unique crime coordinates from API`)
+        setAllCoordinates(data)
+      } catch (err) {
+        console.error("❌ Failed to fetch coordinates. Backend may not be running.", err)
+        console.warn("ℹ️ To start backend: cd backend && python app.py")
+      }
+    }
+
+    fetchHotspots()
+    fetchAllCoordinates()
+    
+    // Initialize map after DOM is ready
+    const timer = setTimeout(() => {
+      initializeMap()
+    }, 100)
+
+    return () => clearTimeout(timer)
+  }, [])
+  useEffect(() => {
+    if (!mapInstanceRef.current || hotspots.length === 0) return
+
+    // Clear existing markers
+    markersRef.current.forEach(marker => marker.setMap(null))
+    markersRef.current = []
+
+    // Clear heatmap
+    if (heatmapRef.current) {
+      heatmapRef.current.setMap(null)
+      heatmapRef.current = null
+    }
+
+    if (activeLayer === "heatmap") {
+      // Create heatmap layer from aggregated hotspots
+      const heatmapData = hotspots.map(spot => ({
+        location: new google.maps.LatLng(spot.coordinates.latitude, spot.coordinates.longitude),
+        weight: spot.risk / 100,
+      }))
+
+      const heatmap = new google.maps.visualization.HeatmapLayer({
+        data: heatmapData,
+        map: mapInstanceRef.current,
+        radius: 30,
+        maxIntensity: 1,
+      })
+      heatmapRef.current = heatmap
+    } else if (activeLayer === "points") {
+      // Show all individual crime coordinates
+      const pointsData = allCoordinates.length > 0 ? allCoordinates : hotspots
+      
+      pointsData.forEach(point => {
+        const lat = point.latitude || (point as any).coordinates?.latitude
+        const lng = point.longitude || (point as any).coordinates?.longitude
+        const severity = (point as any).severity || (point as any).averageSeverity || 2.5
+        
+        if (!lat || !lng) return
+        
+        // Color based on severity
+        const severityColor = severity >= 3.5 ? "#ef4444" : severity >= 2.5 ? "#f59e0b" : "#22c55e"
+        
+        const marker = new google.maps.Marker({
+          position: { lat, lng },
+          map: mapInstanceRef.current,
+          title: (point as any).category || (point as any).name || "Crime Incident",
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 6,
+            fillColor: severityColor,
+            fillOpacity: 0.8,
+            strokeColor: "white",
+            strokeWeight: 1,
+          },
+        })
+
+        marker.addListener("click", () => {
+          // Show info window on click
+          const infoWindow = new google.maps.InfoWindow({
+            content: `<div style="padding:8px;"><strong>${(point as any).category || "Crime"}</strong><br/>Severity: ${Math.round(severity * 10) / 10}<br/>Incidents: ${(point as any).count || 1}</div>`,
+          })
+          infoWindow.open(mapInstanceRef.current, marker)
+        })
+
+        markersRef.current.push(marker)
+      })
+    } else {
+      // Add markers for aggregated hotspots (default)
+      hotspots.forEach(spot => {
+        const riskColor = spot.risk >= 70 ? "#ef4444" : spot.risk >= 50 ? "#f59e0b" : "#22c55e"
+        
+        const marker = new google.maps.Marker({
+          position: {
+            lat: spot.coordinates.latitude,
+            lng: spot.coordinates.longitude,
+          },
+          map: mapInstanceRef.current,
+          title: spot.name,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 10,
+            fillColor: riskColor,
+            fillOpacity: spot.id === selectedHotspot?.id ? 1 : 0.7,
+            strokeColor: "white",
+            strokeWeight: 2,
+          },
+        })
+
+        marker.addListener("click", () => {
+          setSelectedHotspot(spot)
+        })
+
+        markersRef.current.push(marker)
+      })
+    }
+  }, [hotspots, allCoordinates, activeLayer, selectedHotspot?.id])
+
+  // Update card positions when zoom changes
+  useEffect(() => {
+    if (!mapInstanceRef.current) return
+
+    const handleZoomChange = () => {
+      const newZoom = mapInstanceRef.current.getZoom()
+      console.log(`🔍 Zoom changed to level ${newZoom} - updating card positions`)
+      // Force re-render by updating screen position
+      setScreenPos(prev => ({ ...prev, x: (prev?.x || 0) + 0.001 }))
+    }
+
+    const zoomListener = mapInstanceRef.current.addListener('zoom_changed', handleZoomChange)
+
+    return () => {
+      if (zoomListener) zoomListener.remove()
+    }
+  }, [])
+
+  const filteredHotspots = hotspots
+    .filter(spot => {
+      const matchesSearch = spot.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        spot.topCrime.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesFilter = filterStatus === "all" ||
+        (filterStatus === "high" && spot.risk >= 70) ||
+        (filterStatus === "medium" && spot.risk >= 50 && spot.risk < 70) ||
+        (filterStatus === "low" && spot.risk < 50)
+      return matchesSearch && matchesFilter
+    })
+    .sort((a, b) => {
+      if (sortBy === "risk") return b.risk - a.risk
+      if (sortBy === "incidents") return b.crimeCount - a.crimeCount
+      return a.name.localeCompare(b.name)
+    })
+
+  // Debug logging for filter changes
+  useEffect(() => {
+    console.log(`🔍 Filter changed:`, {
+      filterStatus,
+      totalHotspots: hotspots.length,
+      filteredCount: filteredHotspots.length,
+      hotspotRisks: hotspots.map(h => ({ name: h.name, risk: h.risk }))
+    })
+  }, [filterStatus, hotspots, filteredHotspots])
+
+  const toggleBookmark = (id: number) => {
+    setBookmarkedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    )
+  }
+
+  const getRiskColor = (risk: number) => {
+    if (risk >= 70) return "text-red-400"
+    if (risk >= 50) return "text-amber-400"
+    return "text-emerald-400"
+  }
+
+  const getRiskBgColor = (risk: number) => {
+    if (risk >= 70) return "bg-red-500/20 border-red-500/30"
+    if (risk >= 50) return "bg-amber-500/20 border-amber-500/30"
+    return "bg-emerald-500/20 border-emerald-500/30"
+  }
+
+  const getStatusLabel = (risk: number) => {
+    if (risk >= 70) return "High Risk"
+    if (risk >= 50) return "Medium Risk"
+    return "Low Risk"
+  }
 
   return (
-    <div className="p-4 lg:p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Hotspot & Risk Analysis</h1>
-          <p className="text-muted-foreground">AI-powered crime intelligence and predictions</p>
+    <div className="flex h-[calc(100vh-4rem)] bg-background overflow-hidden">
+      {/* Left Sidebar */}
+      <div className="w-90 flex-shrink-0 bg-card border-r border-border flex flex-col">
+        {/* Header */}
+        <div className="p-4 border-b border-border">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                <AlertTriangle className="h-4 w-4 text-primary" />
+              </div>
+              <span className="font-semibold text-foreground">Crime Hotspots</span>
+            </div>
+            <button className="p-2 rounded-lg hover:bg-secondary text-muted-foreground">
+              <Info className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search zones..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/25"
+            />
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="gap-2 bg-transparent">
-            <Download className="h-4 w-4" />
-            Export
-          </Button>
-          <Button className="gap-2">
-            <RefreshCw className="h-4 w-4" />
-            Refresh Data
-          </Button>
+
+        {/* Filters */}
+        <div className="p-4 border-b border-border">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+            <span>Show me:</span>
+            <span className="ml-auto">Sort by:</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1 bg-transparent">
+                  {filterStatus === "all" ? "All Zones" : filterStatus === "high" ? "High Risk" : filterStatus === "medium" ? "Medium Risk" : "Low Risk"}
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => {
+                  console.log("→ Filter: All Zones")
+                  setFilterStatus("all")
+                }}>All Zones</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  console.log("→ Filter: High Risk")
+                  setFilterStatus("high")
+                }}>High Risk</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  console.log("→ Filter: Medium Risk")
+                  setFilterStatus("medium")
+                }}>Medium Risk</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  console.log("→ Filter: Low Risk")
+                  setFilterStatus("low")
+                }}>Low Risk</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1 bg-transparent">
+                  {sortBy === "risk" ? "Risk Level" : sortBy === "incidents" ? "Incidents" : "Name"}
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => setSortBy("risk")}>Risk Level</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortBy("incidents")}>Incidents</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortBy("name")}>Name</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button variant="outline" size="sm" className="gap-1 ml-auto bg-transparent">
+              <SlidersHorizontal className="h-3 w-3" />
+              Filters
+            </Button>
+          </div>
+        </div>
+
+        {/* Hotspot List */}
+        <div className="flex-1 overflow-y-auto">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-muted-foreground text-sm">Loading hotspots...</p>
+            </div>
+          ) : error ? (
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              <p>{error}</p>
+            </div>
+          ) : filteredHotspots.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-muted-foreground text-sm">No hotspots found</p>
+            </div>
+          ) : (
+            filteredHotspots.map((spot) => (
+              <button
+                key={spot.id}
+                onClick={() => setSelectedHotspot(spot)}
+                className={`w-full flex items-center gap-3 p-4 border-l-2 transition-all text-left ${
+                  selectedHotspot?.id === spot.id 
+                    ? "bg-primary/10 border-l-primary" 
+                    : "border-l-transparent hover:bg-secondary/50"
+                }`}
+              >
+                <div className={`flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold ${getRiskBgColor(spot.risk)} border`}>
+                  <span className={getRiskColor(spot.risk)}>{spot.risk}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{spot.name}</p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                    {spot.crimeCount} incidents
+                    <span className="text-muted-foreground/50">-</span>
+                    <span className={getRiskColor(spot.risk)}>{spot.timeActive}</span>
+                  </p>
+                </div>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    toggleBookmark(spot.id)
+                  }}
+                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                    bookmarkedIds.includes(spot.id) 
+                      ? "text-primary" 
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Bookmark className={`h-4 w-4 ${bookmarkedIds.includes(spot.id) ? "fill-current" : ""}`} />
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+
+        {/* Layer Controls */}
+        <div className="p-4 border-t border-border">
+          <p className="text-xs text-muted-foreground mb-2">Map Layer</p>
+          <div className="flex gap-2">
+            <Button
+              variant={activeLayer === "heatmap" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveLayer("heatmap")}
+              className="flex-1"
+            >
+              <Layers className="h-3 w-3 mr-1" />
+              Heatmap
+            </Button>
+            <Button
+              variant={activeLayer === "points" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveLayer("points")}
+              className="flex-1"
+            >
+              <MapPin className="h-3 w-3 mr-1" />
+              Points
+            </Button>
+            <Button
+              variant={activeLayer === "predicted" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveLayer("predicted")}
+              className="flex-1"
+            >
+              <TrendingUp className="h-3 w-3 mr-1" />
+              AI
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Map Section */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* Layer Controls */}
-          <Card>
-            <CardContent className="p-3">
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant={activeLayer === "fir" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setActiveLayer("fir")}
-                  className="gap-2"
-                >
-                  <MapPin className="h-4 w-4" />
-                  FIR Points
-                </Button>
-                <Button
-                  variant={activeLayer === "heatmap" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setActiveLayer("heatmap")}
-                  className="gap-2"
-                >
-                  <Layers className="h-4 w-4" />
-                  Heatmap
-                </Button>
-                <Button
-                  variant={activeLayer === "predicted" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setActiveLayer("predicted")}
-                  className="gap-2"
-                >
-                  <TrendingUp className="h-4 w-4" />
-                  Predicted Risk
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Map Area */}
+      <div className="flex-1 relative bg-muted/30">
+        {/* Google Maps Container */}
+        <div
+          ref={mapRef}
+          className="absolute inset-0"
+        />
 
-          {/* Map */}
-          <Card>
-            <CardContent className="p-0">
-              <div className="relative h-[400px] lg:h-[500px] rounded-lg bg-muted overflow-hidden">
-                {/* Simulated map visualization */}
-                <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/80">
-                  {/* Grid overlay */}
-                  <div className="absolute inset-0 opacity-20">
-                    <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-                      <defs>
-                        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="0.5"/>
-                        </pattern>
-                      </defs>
-                      <rect width="100%" height="100%" fill="url(#grid)" />
-                    </svg>
-                  </div>
-                  
-                  {/* Heatmap zones */}
-                  {activeLayer === "heatmap" && (
-                    <>
-                      <div className="absolute top-1/4 left-1/3 h-32 w-32 rounded-full bg-destructive/30 blur-xl" />
-                      <div className="absolute top-1/2 right-1/4 h-24 w-24 rounded-full bg-warning/30 blur-xl" />
-                      <div className="absolute bottom-1/3 left-1/2 h-20 w-20 rounded-full bg-warning/20 blur-xl" />
-                      <div className="absolute top-2/3 left-1/4 h-16 w-16 rounded-full bg-success/30 blur-xl" />
-                    </>
-                  )}
+        {/* Hotspot Cards Overlay */}
+        {mapInstanceRef.current && hotspots.length > 0 && mapProjection && (
+          <div className="absolute inset-0 pointer-events-none z-10">
+            {hotspots.map((spot) => {
+              try {
+                const point = mapProjection.fromLatLngToPoint(
+                  new google.maps.LatLng(spot.coordinates.latitude, spot.coordinates.longitude)
+                )
+                if (!point) {
+                  console.warn(`⚠️ Could not calculate projection for ${spot.name}`)
+                  return null
+                }
+                
+                const scale = Math.pow(2, mapInstanceRef.current.getZoom())
+                const mapDiv = mapRef.current?.getBoundingClientRect()
+                if (!mapDiv) {
+                  console.warn(`⚠️ Map div bounding rect not available`)
+                  return null
+                }
+                
+                const x = (point.x * scale)
+                const y = (point.y * scale)
+                
+                // Debug first card position
+                if (spot.id === 1) {
+                  console.log(`📍 Card #${spot.id} (${spot.name}):`, {
+                    lat: spot.coordinates.latitude,
+                    lng: spot.coordinates.longitude,
+                    projectionPoint: { px: point.x, py: point.y },
+                    scale: scale,
+                    zoom: mapInstanceRef.current.getZoom(),
+                    finalPos: { x, y },
+                    mapDivSize: { w: mapDiv.width, h: mapDiv.height }
+                  })
+                }
 
-                  {/* FIR Points */}
-                  {activeLayer === "fir" && (
-                    <>
-                      <div className="absolute top-[20%] left-[30%] h-4 w-4 rounded-full bg-destructive border-2 border-card shadow-lg" />
-                      <div className="absolute top-[35%] left-[45%] h-4 w-4 rounded-full bg-destructive border-2 border-card shadow-lg" />
-                      <div className="absolute top-[50%] right-[25%] h-4 w-4 rounded-full bg-warning border-2 border-card shadow-lg" />
-                      <div className="absolute bottom-[30%] left-[40%] h-4 w-4 rounded-full bg-warning border-2 border-card shadow-lg" />
-                      <div className="absolute top-[60%] left-[25%] h-4 w-4 rounded-full bg-success border-2 border-card shadow-lg" />
-                    </>
-                  )}
-
-                  {/* Predicted zones */}
-                  {activeLayer === "predicted" && (
-                    <>
-                      <div className="absolute top-[15%] left-[25%] h-24 w-24 rounded-lg border-2 border-dashed border-destructive bg-destructive/10" />
-                      <div className="absolute top-[45%] right-[20%] h-20 w-20 rounded-lg border-2 border-dashed border-warning bg-warning/10" />
-                      <div className="absolute bottom-[25%] left-[35%] h-16 w-16 rounded-lg border-2 border-dashed border-warning bg-warning/10" />
-                    </>
-                  )}
-                </div>
-
-                {/* Legend */}
-                <div className="absolute bottom-4 left-4 rounded-lg bg-card/95 backdrop-blur border border-border p-3">
-                  <p className="text-xs font-medium text-foreground mb-2">Risk Level</p>
-                  <div className="flex items-center gap-4 text-xs">
-                    <div className="flex items-center gap-1">
-                      <div className="h-3 w-3 rounded-full bg-success" />
-                      <span className="text-muted-foreground">Low</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="h-3 w-3 rounded-full bg-warning" />
-                      <span className="text-muted-foreground">Medium</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="h-3 w-3 rounded-full bg-destructive" />
-                      <span className="text-muted-foreground">High</span>
+                return (
+                  <div
+                    key={spot.id}
+                    className="absolute pointer-events-auto transition-all duration-300 hover:scale-110"
+                    style={{
+                      left: `${x}px`,
+                      top: `${y}px`,
+                      transform: 'translate(-50%, -50%)',
+                      zIndex: selectedHotspot?.id === spot.id ? 40 : 20,
+                    }}
+                    onClick={() => {
+                      console.log(`→ Selected card: ${spot.name}`)
+                      setSelectedHotspot(spot)
+                    }}
+                  >
+                    <div className={`rounded-xl border-2 shadow-xl overflow-hidden cursor-pointer transition-all duration-300 ${getRiskBgColor(spot.risk)}`}>
+                      <div className="px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <div className={`h-6 w-6 rounded-lg flex items-center justify-center border text-xs font-bold flex-shrink-0 ${getRiskBgColor(spot.risk)}`}>
+                            <span className={getRiskColor(spot.risk)}>{spot.risk}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-foreground truncate">{spot.name}</p>
+                            <p className="text-xs text-muted-foreground/80">{spot.crimeCount} incidents</p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                )
+              } catch (err) {
+                console.error(`❌ Error rendering card for ${spot.name}:`, err)
+                return null
+              }
+            })}
+          </div>
+        )}
 
-        {/* Side Panels */}
-        <div className="space-y-4">
-          {/* Top Risky Zones */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-destructive" />
-                Top Risky Zones
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {hotspots.map((spot, i) => (
-                <button
-                  key={spot.id}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors text-left"
-                >
-                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm font-medium ${
-                    i === 0 ? "bg-destructive/10 text-destructive" :
-                    i < 3 ? "bg-warning/10 text-warning-foreground" :
-                    "bg-muted text-muted-foreground"
-                  }`}>
-                    {i + 1}
+        {/* Selected Hotspot Popup */}
+        {selectedHotspot && mapInstanceRef.current && mapProjection && (
+          <div 
+            className="absolute z-30 w-72 transform transition-all duration-300"
+            style={{
+              left: mapRef.current?.getBoundingClientRect().left || 0,
+              top: mapRef.current?.getBoundingClientRect().top || 0,
+              position: 'fixed',
+              marginLeft: '-144px',
+              marginTop: '-100px'
+            }}
+            ref={(el) => {
+              // Update position based on Google Maps projection
+              if (el && mapInstanceRef.current && mapProjection) {
+                const point = mapProjection.fromLatLngToPoint(
+                  new google.maps.LatLng(
+                    selectedHotspot.coordinates.latitude,
+                    selectedHotspot.coordinates.longitude
+                  )
+                )
+                if (point) {
+                  const scale = Math.pow(2, mapInstanceRef.current.getZoom())
+                  const mapDiv = mapRef.current?.getBoundingClientRect()
+                  if (mapDiv) {
+                    const x = (point.x * scale) - (mapDiv.left || 0)
+                    const y = (point.y * scale) - (mapDiv.top || 0) + 80
+                    console.log(`🎯 Popup position for ${selectedHotspot.name}:`, { x, y, zoom: mapInstanceRef.current.getZoom() })
+                    el.style.left = `calc(${x}px - 144px)`
+                    el.style.top = `${y}px`
+                    el.style.position = 'absolute'
+                  }
+                }
+              }
+            }}
+          >
+            <div className="bg-card rounded-xl border border-border shadow-2xl overflow-hidden">
+              {/* Header */}
+              <div className="p-4 border-b border-border">
+                <div className="flex items-start gap-3">
+                  <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${getRiskBgColor(selectedHotspot.risk)}`}>
+                    <AlertTriangle className={`h-5 w-5 ${getRiskColor(selectedHotspot.risk)}`} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{spot.name}</p>
-                    <p className="text-xs text-muted-foreground">{spot.crimeCount} incidents - {spot.topCrime}</p>
+                    <h3 className="text-sm font-semibold text-foreground truncate">{selectedHotspot.name}</h3>
+                    <p className={`text-xs mt-0.5 ${getRiskColor(selectedHotspot.risk)}`}>{getStatusLabel(selectedHotspot.risk)}</p>
                   </div>
-                  <div className="text-right">
-                    <p className={`text-sm font-semibold ${
-                      spot.risk >= 70 ? "text-destructive" :
-                      spot.risk >= 50 ? "text-warning-foreground" :
-                      "text-success"
-                    }`}>
-                      {spot.risk}%
-                    </p>
-                    <p className={`text-xs ${spot.trend.startsWith("+") ? "text-destructive" : "text-success"}`}>
-                      {spot.trend}
-                    </p>
-                  </div>
-                </button>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Crime Type Trends */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                Crime Type Distribution
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {crimeTypeTrends.map((crime) => (
-                <div key={crime.type} className="space-y-1">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-foreground">{crime.type}</span>
-                    <span className="text-muted-foreground">{crime.count}</span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                    <div 
-                      className="h-full rounded-full bg-primary"
-                      style={{ width: `${crime.percentage}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Time-Based Risk */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Clock className="h-4 w-4 text-primary" />
-                Time-Based Risk
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {timeBasedRisk.map((slot) => (
-                <div key={slot.time} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                  <div className="flex items-center gap-2">
-                    {slot.time.includes("AM") && slot.time.includes("12 AM") || slot.time.includes("6 PM") ? (
-                      <Moon className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <Sun className="h-4 w-4 text-muted-foreground" />
-                    )}
-                    <span className="text-sm text-foreground">{slot.time}</span>
-                  </div>
-                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                    slot.color === "destructive" ? "bg-destructive/10 text-destructive" :
-                    slot.color === "warning" ? "bg-warning/10 text-warning-foreground" :
-                    "bg-success/10 text-success"
-                  }`}>
-                    {slot.risk}
-                  </span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* AI Prediction */}
-          <Card className="bg-primary/5 border-primary/20">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <TrendingUp className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">AI Prediction</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    High risk predicted for Sector 7 tonight (10 PM - 2 AM). Consider increasing patrol coverage.
-                  </p>
-                  <Button size="sm" className="mt-3 gap-1">
-                    Generate Patrol Plan
-                    <ChevronRight className="h-3 w-3" />
-                  </Button>
+                  <button 
+                    onClick={() => setSelectedHotspot(null)}
+                    className="p-1 rounded-lg hover:bg-secondary text-muted-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+
+              {/* Stats Row */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border text-xs">
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <AlertTriangle className="h-3 w-3" />
+                  <span>{selectedHotspot.crimeCount} incidents</span>
+                </div>
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  <span>{selectedHotspot.timeActive}</span>
+                </div>
+                <div className={`flex items-center gap-1 ${selectedHotspot.trend.startsWith("+") ? "text-red-400" : "text-emerald-400"}`}>
+                  <TrendingUp className="h-3 w-3" />
+                  <span>{selectedHotspot.trend}</span>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-4">
+                <h4 className="text-sm font-medium text-foreground mb-2">Primary Crime Type</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  The most common crime in this zone is <span className="text-foreground font-medium">{selectedHotspot.topCrime}</span>. 
+                  Risk score is <span className={`font-medium ${getRiskColor(selectedHotspot.risk)}`}>{selectedHotspot.risk}%</span> based on historical data and AI analysis.
+                </p>
+              </div>
+
+              {/* Action Button */}
+              <div className="px-4 pb-4">
+                <Button variant="outline" className="w-full bg-transparent">
+                  View Full Details
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Map Legend */}
+        <div className="absolute bottom-6 left-6 bg-card/95 backdrop-blur border border-border rounded-xl p-4">
+          <p className="text-xs font-medium text-foreground mb-3">Risk Level</p>
+          <div className="flex items-center gap-4 text-xs">
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full bg-emerald-400" />
+              <span className="text-muted-foreground">Low</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full bg-amber-400" />
+              <span className="text-muted-foreground">Medium</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full bg-red-400" />
+              <span className="text-muted-foreground">High</span>
+            </div>
+          </div>
+        </div>
+
+        {/* AI Prediction Badge */}
+        <div className="absolute top-6 right-6 bg-primary/10 border border-primary/20 rounded-xl p-4 max-w-xs">
+          <div className="flex items-start gap-3">
+            <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
+              <TrendingUp className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-primary">AI Prediction</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                High risk predicted for Borivali tonight. Consider increased patrol.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
+
+
     </div>
   )
 }

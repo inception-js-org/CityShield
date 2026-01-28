@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { 
   MapPin, 
   Navigation,
@@ -36,7 +36,127 @@ const timeAlerts = [
 
 export default function PatrolRoute() {
   const [isPatrolling, setIsPatrolling] = useState(false)
+  const mapRef = useRef<HTMLDivElement>(null)
+  const mapInstanceRef = useRef<google.maps.Map | null>(null)
+  const polylineRef = useRef<google.maps.Polyline | null>(null)
+  const markersRef = useRef<google.maps.Marker[]>([])
+
   const completedCount = checkpoints.filter(c => c.completed).length
+
+  // Coordinates for Sector 7 - Industrial Area
+  const routeCoordinates = [
+    { lat: 19.04, lng: 72.82, name: "Main Gate" },           // Checkpoint 1
+    { lat: 19.045, lng: 72.825, name: "Warehouse A" },       // Checkpoint 2
+    { lat: 19.050, lng: 72.830, name: "Loading Bay" },       // Checkpoint 3
+    { lat: 19.055, lng: 72.835, name: "Parking Area" },      // Checkpoint 4
+    { lat: 19.060, lng: 72.840, name: "Exit Point" },        // Checkpoint 5
+  ]
+
+  // Initialize map with route
+  useEffect(() => {
+    const initializeMap = () => {
+      if (!mapRef.current || !window.google) return
+
+      const routeCenter = { lat: 19.0475, lng: 72.8325 }
+
+      const map = new google.maps.Map(mapRef.current, {
+        center: routeCenter,
+        zoom: 15,
+        mapTypeControl: true,
+        streetViewControl: false,
+        fullscreenControl: false,
+      })
+
+      mapInstanceRef.current = map
+
+      // Draw polyline for the route
+      if (polylineRef.current) {
+        polylineRef.current.setMap(null)
+      }
+
+      const polyline = new google.maps.Polyline({
+        path: routeCoordinates.map(c => ({ lat: c.lat, lng: c.lng })),
+        geodesic: true,
+        strokeColor: "#3b82f6",
+        strokeOpacity: 0.8,
+        strokeWeight: 3,
+        map: map,
+      })
+      polylineRef.current = polyline
+
+      // Clear existing markers
+      markersRef.current.forEach(marker => marker.setMap(null))
+      markersRef.current = []
+
+      // Add markers for each checkpoint
+      routeCoordinates.forEach((checkpoint, index) => {
+        const isCompleted = index < completedCount
+        const isCurrent = index === completedCount && index < routeCoordinates.length
+
+        const marker = new google.maps.Marker({
+          position: { lat: checkpoint.lat, lng: checkpoint.lng },
+          map: map,
+          title: checkpoint.name,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 10,
+            fillColor: isCompleted ? "#10b981" : isCurrent ? "#f59e0b" : "#e5e7eb",
+            fillOpacity: 1,
+            strokeColor: isCompleted ? "#059669" : isCurrent ? "#d97706" : "#9ca3af",
+            strokeWeight: 2,
+          },
+        })
+
+        const infoWindow = new google.maps.InfoWindow({
+          content: `<div style="padding:8px;"><strong>${checkpoint.name}</strong><br/>${isCompleted ? "✓ Visited" : isCurrent ? "Current" : "Pending"}</div>`,
+        })
+
+        marker.addListener("click", () => {
+          infoWindow.open(map, marker)
+        })
+
+        markersRef.current.push(marker)
+      })
+
+      // Add markers for hotspots
+      const hotspotLocations = [
+        { lat: 19.047, lng: 72.828, name: "Behind Warehouse A" },
+        { lat: 19.053, lng: 72.837, name: "Dark Alley near Gate 2" },
+      ]
+
+      hotspotLocations.forEach(hotspot => {
+        const hotspotMarker = new google.maps.Marker({
+          position: { lat: hotspot.lat, lng: hotspot.lng },
+          map: map,
+          title: hotspot.name,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: "#ef4444",
+            fillOpacity: 0.6,
+            strokeColor: "#dc2626",
+            strokeWeight: 2,
+          },
+        })
+
+        const hotspotInfo = new google.maps.InfoWindow({
+          content: `<div style="padding:8px;"><strong>${hotspot.name}</strong><br/><span style="color:#ef4444;">⚠ Risk Hotspot</span></div>`,
+        })
+
+        hotspotMarker.addListener("click", () => {
+          hotspotInfo.open(map, hotspotMarker)
+        })
+
+        markersRef.current.push(hotspotMarker)
+      })
+    }
+
+    const timer = setTimeout(() => {
+      initializeMap()
+    }, 100)
+
+    return () => clearTimeout(timer)
+  }, [completedCount])
 
   return (
     <div className="p-4 space-y-4">
@@ -83,83 +203,10 @@ export default function PatrolRoute() {
       {/* Route Map */}
       <Card>
         <CardContent className="p-0">
-          <div className="relative h-[250px] rounded-lg bg-muted overflow-hidden">
-            {/* Simple route visualization */}
-            <div className="absolute inset-0 p-4">
-              {/* Grid background */}
-              <div className="absolute inset-0 opacity-10">
-                <svg className="w-full h-full">
-                  <defs>
-                    <pattern id="routeGrid" width="25" height="25" patternUnits="userSpaceOnUse">
-                      <path d="M 25 0 L 0 0 0 25" fill="none" stroke="currentColor" strokeWidth="0.5"/>
-                    </pattern>
-                  </defs>
-                  <rect width="100%" height="100%" fill="url(#routeGrid)" />
-                </svg>
-              </div>
-
-              {/* Route line */}
-              <svg className="absolute inset-4" viewBox="0 0 300 200">
-                <path
-                  d="M 30 40 L 100 60 L 180 80 L 220 140 L 270 160"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  strokeDasharray="8 4"
-                  className="text-primary"
-                />
-              </svg>
-
-              {/* Checkpoint markers */}
-              {checkpoints.map((checkpoint, i) => {
-                const positions = [
-                  { x: "10%", y: "20%" },
-                  { x: "33%", y: "30%" },
-                  { x: "55%", y: "40%" },
-                  { x: "70%", y: "65%" },
-                  { x: "88%", y: "75%" },
-                ]
-                return (
-                  <div
-                    key={checkpoint.id}
-                    className="absolute transform -translate-x-1/2 -translate-y-1/2"
-                    style={{ left: positions[i].x, top: positions[i].y }}
-                  >
-                    <div className={`flex h-8 w-8 items-center justify-center rounded-full border-2 ${
-                      checkpoint.completed
-                        ? "bg-success border-success text-success-foreground"
-                        : "bg-card border-border text-muted-foreground"
-                    }`}>
-                      {checkpoint.completed ? (
-                        <CheckCircle className="h-4 w-4" />
-                      ) : (
-                        <span className="text-xs font-medium">{checkpoint.id}</span>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-
-              {/* Hotspot markers */}
-              <div className="absolute top-[45%] left-[40%] transform -translate-x-1/2 -translate-y-1/2">
-                <div className="h-6 w-6 rounded-full bg-destructive/30 animate-pulse flex items-center justify-center">
-                  <AlertTriangle className="h-3 w-3 text-destructive" />
-                </div>
-              </div>
-            </div>
-
-            {/* Legend */}
-            <div className="absolute bottom-2 left-2 flex gap-3 text-xs">
-              <div className="flex items-center gap-1 px-2 py-1 rounded bg-card/90">
-                <CheckCircle className="h-3 w-3 text-success" />
-                <span className="text-muted-foreground">Visited</span>
-              </div>
-              <div className="flex items-center gap-1 px-2 py-1 rounded bg-card/90">
-                <AlertTriangle className="h-3 w-3 text-destructive" />
-                <span className="text-muted-foreground">Hotspot</span>
-              </div>
-            </div>
-          </div>
+          <div 
+            ref={mapRef}
+            className="relative h-[400px] rounded-lg bg-muted overflow-hidden"
+          />
         </CardContent>
       </Card>
 
