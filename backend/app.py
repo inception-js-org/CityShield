@@ -16,7 +16,7 @@ app.add_middleware(
 )
 
 # Import routers
-from routers import officers, zones, patrols, complaints, firs, alerts,hotspots
+from routers import officers, zones, patrols, complaints, firs, alerts, hotspots, predictions
 
 # Include routers
 app.include_router(officers.router)
@@ -26,6 +26,7 @@ app.include_router(complaints.router)
 app.include_router(firs.router)
 app.include_router(alerts.router)
 app.include_router(hotspots.router)
+app.include_router(predictions.router)
 
 
 @app.get("/health")

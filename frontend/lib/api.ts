@@ -123,3 +123,27 @@ export const hotspotsAPI = {
   getCrimesSummary: () => fetchAPI("/api/hotspots/crimes/summary"),
   getStats: () => fetchAPI("/api/hotspots/stats"),
 };
+
+// AI Predictions & Patrol Generation
+export const predictionsAPI = {
+  // Get crime predictions and patrol recommendations for a specific date
+  getDayPredictions: (date: string, numPatrols?: number) => 
+    fetchAPI(`/api/predictions/day/${date}${numPatrols ? `?num_patrols=${numPatrols}` : ""}`),
+  
+  // Generate AI-based patrols and save to database
+  generatePatrols: (date: string, numPatrols: number = 10, autoAssign: boolean = false) =>
+    fetchAPI(`/api/predictions/generate-patrols?date_str=${date}&num_patrols=${numPatrols}&auto_assign_officers=${autoAssign}`, {
+      method: "POST"
+    }),
+  
+  // Get 24-hour timeline for a specific zone
+  getZoneTimeline: (zoneId: string, date?: string) =>
+    fetchAPI(`/api/predictions/zone/${zoneId}/timeline${date ? `?date_str=${date}` : ""}`),
+  
+  // Compare model predictions
+  compareModels: (zoneId: string, date: string, hour: number = 12) =>
+    fetchAPI(`/api/predictions/compare-models?zone_id=${zoneId}&date_str=${date}&hour=${hour}`),
+  
+  // Get prediction engine stats
+  getStats: () => fetchAPI("/api/predictions/stats"),
+};
